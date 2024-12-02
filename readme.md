@@ -54,7 +54,23 @@ services.lurker = {
 };
 ```
 
-for non-nixos users:
+or with the docker image:
+
+```bash
+# pull the latest image from gh container registry
+$ docker pull ghcr.io/oppiliappan/lurker:latest
+
+# the image will be marked as created on 1970, this is a
+# quirk of using nix, it should not affect usage
+$ docker image ls
+REPOSITORY                   TAG       IMAGE ID       CREATED        SIZE
+ghcr.io/oppiliappan/lurker   latest    ba3733164889   54 years ago   186MB
+
+# start lurker in a container
+$ docker run ghcr.io/oppiliappan/lurker:latest
+```
+
+or with just [bun](https://bun.sh/):
 
 ```bash
 bun run src/index.js 
