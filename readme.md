@@ -67,7 +67,10 @@ REPOSITORY                   TAG       IMAGE ID       CREATED        SIZE
 ghcr.io/oppiliappan/lurker   latest    ba3733164889   54 years ago   186MB
 
 # start lurker in a container
-$ docker run ghcr.io/oppiliappan/lurker:latest
+#
+# lurker stores data in /data,
+# so create a volume on the host accordingly:
+$ docker run -v /your/host/lurker-data:/data ghcr.io/oppiliappan/lurker:latest
 ```
 
 or with just [bun](https://bun.sh/):
