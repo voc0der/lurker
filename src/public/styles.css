@@ -579,3 +579,7 @@ form input[type="submit"]:hover {
 a.nav-link {
   color: var(--text-color-muted);
 }
+
+.comment-info-container > p {
+  margin-top: 0px;
+}

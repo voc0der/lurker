@@ -2,21 +2,24 @@ include ../utils
 
 mixin infoContainer(data, next_id, prev_id)
   div.comment-info-container
-    | #{fmtnum(data.ups)} ↑
-    | ·&nbsp;
-    if next_id
-      a(href=`#${next_id}`).nav-link next
+    p
+      | #{fmtnum(data.ups)} ↑
+      | ·&nbsp;
+      if next_id
+        a(href=`#${next_id}` title="scroll to next comment").nav-link next
+        | &nbsp;·&nbsp;
+      if prev_id
+        a(href=`#${prev_id}` title="scroll to previous comment").nav-link prev
+        | &nbsp;·&nbsp;
+      span(class=`${data.is_submitter ? 'op' : ''}`)
+        | u/#{data.author} #{data.is_submitter ? '(op)' : ''}
       | &nbsp;·&nbsp;
-    if prev_id
-      a(href=`#${prev_id}`).nav-link prev
+      if data.collapsed_reason_code == "DELETED"
+        a(href=`https://undelete.pullpush.io${data.permalink}`) search on undelete
+        | &nbsp;·&nbsp;
+      | #{timeDifference(Date.now(), data.created * 1000)}
       | &nbsp;·&nbsp;
-    span(class=`${data.is_submitter ? 'op' : ''}`)
-      | u/#{data.author} #{data.is_submitter ? '(op)' : ''}
-    | &nbsp;·&nbsp;
-    if data.collapsed_reason_code == "DELETED"
-      a(href=`https://undelete.pullpush.io${data.permalink}`) search on undelete
-      | &nbsp;·&nbsp;
-    | #{timeDifference(Date.now(), data.created * 1000)}
+      a(href=`https://reddit.com${data.permalink}` title="view on reddit").nav-link open ↗
 
 -
   function hasReplies(data) {

@@ -80,8 +80,8 @@
 
           copyToRoot = final.buildEnv {
             name = "image-root";
-            paths = [ final.lurker ];
-            pathsToLink = [ "/bin" ];
+            paths = [final.lurker];
+            pathsToLink = ["/bin"];
           };
 
           runAsRoot = ''
