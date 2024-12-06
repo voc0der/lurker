@@ -13,19 +13,17 @@ html
 
         form(action="/sub-search" method="get").search-bar
           - var prefill = original_query ?? "";
-          input(type="text" name="q" placeholder="search subreddits" value=prefill required).search-input
+          input(type="text" name="q" placeholder="type in a search term..." value=prefill required).search-input
           button(type="submit").search-button go
+
+        hr
 
         h1 search posts
 
         form(action="/post-search" method="get").search-bar
           - var prefill = original_query ?? "";
-          input(type="text" name="q" placeholder="search posts" value=prefill required).search-input
+          input(type="text" name="q" placeholder="type in a search term..." value=prefill required).search-input
           button(type="submit").search-button go
-
-        hr
-
-        h3 tips
         p 
           | you can narrow search results using filters:
           br

@@ -112,20 +112,9 @@ router.get("/sub-search", authenticateToken, async (req, res) => {
 	if (!req.query || !req.query.q) {
 		res.render("sub-search", { user: req.user });
 	} else {
-		const { q, options } = req.query.q.split(/\s+/).reduce(
-			(acc, word) => {
-				if (word.startsWith("+")) {
-					acc.options.push(word.slice(1));
-				} else {
-					acc.q += `${word} `;
-				}
-				return acc;
-			},
-			{ options: [], q: "" },
-		);
-
+		const { q, options } = parseQuery(req.query.q);
 		const { items, after } = await G.searchSubreddits(q, {
-			include_over_18: options.includes("nsfw"),
+			include_over_18: (options.nsfw ?? "no") === "yes",
 		});
 		const subs = db
 			.query("SELECT subreddit FROM subscriptions WHERE user_id = $id")
@@ -151,20 +140,9 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 	if (!req.query || !req.query.q) {
 		res.render("post-search", { user: req.user });
 	} else {
-		const { q, options } = req.query.q.split(/\s+/).reduce(
-			(acc, word) => {
-				if (word.startsWith("+")) {
-					acc.options.push(word.slice(1));
-				} else {
-					acc.q += `${word} `;
-				}
-				return acc;
-			},
-			{ options: [], q: "" },
-		);
-
+		const { q, options } = parseQuery(req.query.q);
 		const { items, after } = await G.searchSubmissions(q, {
-			include_over_18: options.includes("nsfw"),
+			include_over_18: (options.nsfw ?? "no") === "yes",
 		});
 		const message =
 			items.length === 0
@@ -179,6 +157,21 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 		});
 	}
 });
+
+function parseQuery(q) {
+	return q.split(/\s+/).reduce(
+		(acc, word) => {
+			if (word.includes(":")) {
+				const [key, val] = word.split(":");
+				acc.options[key] = val;
+			} else {
+				acc.q += `${word} `;
+			}
+			return acc;
+		},
+		{ options: [], q: "" },
+	);
+}
 
 // GET /dashboard
 router.get("/dashboard", authenticateToken, async (req, res) => {
