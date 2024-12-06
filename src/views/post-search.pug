@@ -1,0 +1,23 @@
+include ../mixins/post
+include ../mixins/header
+include ../mixins/head
+
+doctype html
+html
+  +head("search posts")
+  include ../mixins/subUtils
+  body
+    main#content
+      +header(user)
+      div.hero
+        h1 search posts
+        form(action="/post-search" method="get").search-bar
+          - var prefill = original_query ?? "";
+          input(type="text" name="q" placeholder="search posts" value=prefill required).search-input
+          button(type="submit").search-button go
+        if message
+          div.search-message
+            i #{message}
+      if items
+        each item in items
+          +post(item.data)

@@ -103,6 +103,7 @@
         nativeBuildInputs = [
           pkgs.bun
           pkgs.biome
+          pkgs.typescript-language-server
         ];
       });
 

@@ -10,9 +10,9 @@ html
       +header(user)
       div.hero
         h1 search subreddits
-        form(action="/search" method="get").search-bar
+        form(action="/sub-search" method="get").search-bar
           - var prefill = original_query ?? "";
-          input(type="text" name="q" placeholder="search subreddits (add +nsfw to include over-18 results)" value=prefill required).search-input
+          input(type="text" name="q" placeholder="search subreddits" value=prefill required).search-input
           button(type="submit").search-button go
         if message
           div.search-message

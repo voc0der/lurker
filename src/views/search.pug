@@ -1,0 +1,54 @@
+include ../mixins/header
+include ../mixins/head
+
+doctype html
+html
+  +head("search subreddits")
+  include ../mixins/subUtils
+  body
+    main#content
+      +header(user)
+      div.hero
+        h1 search subreddits
+
+        form(action="/sub-search" method="get").search-bar
+          - var prefill = original_query ?? "";
+          input(type="text" name="q" placeholder="search subreddits" value=prefill required).search-input
+          button(type="submit").search-button go
+
+        h1 search posts
+
+        form(action="/post-search" method="get").search-bar
+          - var prefill = original_query ?? "";
+          input(type="text" name="q" placeholder="search posts" value=prefill required).search-input
+          button(type="submit").search-button go
+
+        hr
+
+        h3 tips
+        p 
+          | you can narrow search results using filters:
+          br
+          - 
+            var triples = [
+                ["subreddit", "ohio", "find submissions in 'r/ohio'"],
+                ["author", "spez", "find submissions by 'u/spez'"],
+                ["site", "x.com", "find submissions from 'x.com'"],
+                ["url", "text", "search for 'text' in url"],
+                ["selftext", "text", "search for 'text' in post contents"],
+                ["self", "yes/no", "include/exclude selftext posts"],
+                ["nsfw", "yes/no", "include/exclude over-18 posts"],
+             ]
+
+          ul
+            each triple in triples
+              li
+                strong
+                  | #{triple[0]}:
+                  em #{triple[1]}
+                | &nbsp;&nbsp;&nbsp;&nbsp;#{triple[2]}
+          | example:
+          br
+          |&nbsp;&nbsp;&nbsp;&nbsp;
+          code subreddit:iowa site:x.com elections
+

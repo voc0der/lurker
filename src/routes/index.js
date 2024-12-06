@@ -102,8 +102,13 @@ router.get("/subs", authenticateToken, async (req, res) => {
 	res.render("subs", { subs, user: req.user });
 });
 
-// GET /search-subreddits
+// GET /search
 router.get("/search", authenticateToken, async (req, res) => {
+	res.render("search", { user: req.user });
+});
+
+// GET /sub-search
+router.get("/sub-search", authenticateToken, async (req, res) => {
 	if (!req.query || !req.query.q) {
 		res.render("sub-search", { user: req.user });
 	} else {
@@ -133,6 +138,40 @@ router.get("/search", authenticateToken, async (req, res) => {
 		res.render("sub-search", {
 			items,
 			subs,
+			after,
+			message,
+			user: req.user,
+			original_query: req.query.q,
+		});
+	}
+});
+
+// GET /post-search
+router.get("/post-search", authenticateToken, async (req, res) => {
+	if (!req.query || !req.query.q) {
+		res.render("post-search", { user: req.user });
+	} else {
+		const { q, options } = req.query.q.split(/\s+/).reduce(
+			(acc, word) => {
+				if (word.startsWith("+")) {
+					acc.options.push(word.slice(1));
+				} else {
+					acc.q += `${word} `;
+				}
+				return acc;
+			},
+			{ options: [], q: "" },
+		);
+
+		const { items, after } = await G.searchSubmissions(q, {
+			include_over_18: options.includes("nsfw"),
+		});
+		const message =
+			items.length === 0
+				? "no results found"
+				: `showing ${items.length} results`;
+		res.render("post-search", {
+			items,
 			after,
 			message,
 			user: req.user,
