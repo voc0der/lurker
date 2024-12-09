@@ -41,11 +41,10 @@
             cp -R ./node_modules/* $out/node_modules
             ls -la $out/node_modules
           '';
-          
-          # Correct placement of outputHash attributes within the mkDerivation block
-          outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8=";
-          outputHashAlgo = "sha256";
-          outputHashMode = "recursive";
+          # Commenting out outputHash and related attributes for now
+          # outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8=";
+          # outputHashAlgo = "sha256";
+          # outputHashMode = "recursive";
         };
       lurker = with final;
         stdenv.mkDerivation {
