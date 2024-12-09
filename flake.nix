@@ -22,7 +22,7 @@
       version = "0.1.0";
     in {
       node_modules = with final;
-        stdenv.mkDerivation {
+        stdenv.mkDerivation rec {
           pname = "lurker-node-modules";
           version = "0.0.1";
           impureEnvVars =
@@ -41,10 +41,10 @@
             cp -R ./node_modules/* $out/node_modules
             ls -la $out/node_modules
           '';
-          # Correct hash for node_modules directory content
-          outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8="; # Use the correct hash
-          outputHashAlgo = "sha256"; # Optional, unless you want specific hashing behavior
-          outputHashMode = "recursive"; # Ensure it's recursive if needed for nested directories
+          # Place the hash attributes here in the correct position
+          outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8=";
+          outputHashAlgo = "sha256";
+          outputHashMode = "recursive";
         };
       lurker = with final;
         stdenv.mkDerivation {
