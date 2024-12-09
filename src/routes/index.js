@@ -340,11 +340,13 @@ router.post("/login", async (req, res) => {
   // Check the credentials in the database (simplified here)
   const user = db.query("SELECT * FROM users WHERE username = $username").get({ username });
 
-  if (user && user.password_hash === password) { // Normally you'd hash and compare passwords
+  if (user && (await Bun.password.verify(password, user.password_hash))) {
+    // Password matches, proceed with login
     const token = jwt.sign({ username, id: user.id }, JWT_KEY, { expiresIn: "5d" });
     res.cookie("auth_token", token, { httpOnly: true, maxAge: 5 * 24 * 60 * 60 * 1000 });
-    return res.redirect('/'); // Redirect to home after successful login
+    return res.redirect('/'); // Redirect after successful login
   } else {
+    // Invalid credentials, show error message
     res.render("login", { message: "Invalid credentials, try again." });
   }
 });
