@@ -5,7 +5,7 @@ const geddit = require("./geddit.js");
 const cookieParser = require("cookie-parser");
 const app = express();
 const hasher = new Bun.CryptoHasher("sha256", "secret-key");
-const JWT_KEY = hasher.update(Math.random().toString()).digest("hex");
+const JWT_KEY = process.env.JWT_SECRET_KEY || hasher.update(Math.random().toString()).digest("hex");
 
 module.exports = { JWT_KEY };
 
