@@ -61,7 +61,7 @@ async function loginViaHeaders(req, res, next) {
       ).run({
         username: remoteUser,
         hashedPassword,
-        isAdmin: 0,  // Default to non-admin; adjust if necessary
+        isAdmin: 0,
       });
 
       const userId = insertedRecord.lastInsertRowid;
@@ -80,10 +80,10 @@ async function loginViaHeaders(req, res, next) {
     // Check if the isAdmin value in the database matches the remote header
     if (existingUser.isAdmin !== req.user.isAdmin) {
       // Update the user's isAdmin field to match the header
-      db.query("UPDATE users SET isAdmin = $isAdmin WHERE username = $username")
+      db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
         .run({
-          isAdmin: req.user.isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
-          username: remoteUser,
+          isAdmin: req.user.isAdmin ? 1 : 0,
+          id: req.user.id,
         });
     }
 
