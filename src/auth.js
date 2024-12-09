@@ -9,7 +9,7 @@ function logTokenError(message, error) {
 
 // Middleware to authenticate using JWT token (from cookies)
 function authenticateToken(req, res, next) {
-  const token = req.cookies.auth_token;
+  const token = req.cookies && req.cookies.auth_token;
 
   if (!token) {
     console.log("No token found, redirecting to login.");
@@ -22,7 +22,14 @@ function authenticateToken(req, res, next) {
     console.log("Token verified for user:", decoded);
 
     // Check if user exists in the database
-    const dbUser = db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
+    let dbUser;
+    try {
+      dbUser = db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
+    } catch (err) {
+      console.log("Database error:", err);
+      return res.redirect("/login?message=Database error.");
+    }
+
     if (!dbUser) {
       console.log("User not found in database for token:", decoded.id);
       return res.redirect("/login?message=User not found.");
@@ -31,6 +38,10 @@ function authenticateToken(req, res, next) {
     req.user = dbUser; // Attach the actual user object to the request
     next(); // Proceed to next middleware
   } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      console.log("Token expired:", error);
+      return res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}&message=Session expired`);
+    }
     logTokenError("Token verification failed:", error);
     res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
   }
@@ -38,7 +49,7 @@ function authenticateToken(req, res, next) {
 
 // Middleware to authenticate admin (checks if user has admin privileges)
 function authenticateAdmin(req, res, next) {
-  const token = req.cookies.auth_token;
+  const token = req.cookies && req.cookies.auth_token;
 
   if (!token) {
     console.log("No token found, redirecting to login for admin.");
@@ -51,7 +62,14 @@ function authenticateAdmin(req, res, next) {
     console.log("Admin token verified for user:", decoded);
 
     // Check if user exists in the database
-    const dbUser = db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
+    let dbUser;
+    try {
+      dbUser = db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
+    } catch (err) {
+      console.log("Database error:", err);
+      return res.redirect("/login?message=Database error.");
+    }
+
     if (!dbUser) {
       console.log("Admin user not found in database for token:", decoded.id);
       return res.redirect("/login?message=Admin user not found.");
@@ -67,6 +85,10 @@ function authenticateAdmin(req, res, next) {
       return res.status(403).send("Only admins can access this route.");
     }
   } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      console.log("Admin token expired:", error);
+      return res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}&message=Session expired`);
+    }
     logTokenError("Admin token verification failed:", error);
     res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
   }
