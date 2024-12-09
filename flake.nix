@@ -22,7 +22,7 @@
       version = "0.1.0";
     in {
       node_modules = with final;
-        stdenv.mkDerivation rec {
+        stdenv.mkDerivation {
           pname = "lurker-node-modules";
           version = "0.0.1";
           impureEnvVars =
@@ -41,10 +41,9 @@
             cp -R ./node_modules/* $out/node_modules
             ls -la $out/node_modules
           '';
-          # Commenting out outputHash and related attributes for now
-          # outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8=";
-          # outputHashAlgo = "sha256";
-          # outputHashMode = "recursive";
+          outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8=";
+          outputHashAlgo = "sha256";
+          outputHashMode = "recursive";
         };
       lurker = with final;
         stdenv.mkDerivation {
@@ -71,6 +70,7 @@
             makeBinaryWrapper ${bun}/bin/bun $out/bin/$pname \
             --prefix PATH : ${lib.makeBinPath [bun]} \
             --add-flags "run --prefer-offline --no-install $out/src/index.js"
+
           '';
         };
       dockerImage = with final;
