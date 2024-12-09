@@ -35,7 +35,7 @@ function loginViaHeaders(req, res, next) {
     httpOnly: true,
     secure: true,
     maxAge: 5 * 24 * 60 * 60 * 1000,
-    sameSite: 'None',
+    sameSite: 'Strict',
   });
 
   // Redirect to the originally requested page or home if no `direct` query
@@ -348,7 +348,7 @@ router.post("/login", async (req, res) => {
         httpOnly: true,
         secure: true,
         maxAge: 5 * 24 * 60 * 60 * 1000,
-        sameSite: 'None',
+        sameSite: 'Strict',
       });
       const redirectTo = req.query.direct || '/';
       return res.redirect(redirectTo);
