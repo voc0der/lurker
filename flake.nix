@@ -41,9 +41,7 @@
             cp -R ./node_modules/* $out/node_modules
             ls -la $out/node_modules
           '';
-          outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8=";
-          outputHashAlgo = "sha256";
-          outputHashMode = "recursive";
+          outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8="; # Fixed hash
         };
       lurker = with final;
         stdenv.mkDerivation {
@@ -70,7 +68,6 @@
             makeBinaryWrapper ${bun}/bin/bun $out/bin/$pname \
             --prefix PATH : ${lib.makeBinPath [bun]} \
             --add-flags "run --prefer-offline --no-install $out/src/index.js"
-
           '';
         };
       dockerImage = with final;
