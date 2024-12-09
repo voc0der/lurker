@@ -15,20 +15,22 @@ function loginViaHeaders(req, res, next) {
   const remoteUser = req.headers['remote-user'];
   const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
 
-  if (remoteUser) {
-    req.user = {
-      id: remoteUser,
-      isAdmin: remoteGroups.includes('admins'),  // Check if user is an admin
-      validated: true,  // Flag to mark user as validated via headers
-    };
-
-    // Redirect to the originally requested page or home if no `direct` query
-    const redirectTo = req.query.direct || '/';
-    return res.redirect(redirectTo);
+  // Check if remoteUser header is missing
+  if (!remoteUser) {
+    console.log("Remote user header missing");
+    return res.redirect("/login");  // Redirect to login page if missing
   }
 
-  // If headers don't exist, proceed to the next middleware
-  next();
+  // If remoteUser is present, set user info and validate
+  req.user = {
+    id: remoteUser,
+    isAdmin: remoteGroups.includes('admins'),  // Check if user is an admin
+    validated: true,  // Flag to mark user as validated via headers
+  };
+
+  // Redirect to the originally requested page or home if no `direct` query
+  const redirectTo = req.query.direct || '/';
+  return res.redirect(redirectTo);  // Redirect the user to the appropriate location
 }
 
 // GET /
@@ -94,20 +96,20 @@ router.post("/login", async (req, res) => {
   const user = db.query("SELECT * FROM users WHERE username = $username").get({ username });
 
   if (user && (await Bun.password.verify(password, user.password_hash))) {
-    // Create the JWT token
-    const token = jwt.sign({ username, id: user.id }, JWT_KEY, { expiresIn: "5d" });
-
-    // Set the token in the cookie
-    res.cookie("auth_token", token, {
-      httpOnly: true,  // Prevent client-side access
-      secure: process.env.NODE_ENV === 'production',  // Only secure in production (requires HTTPS)
-      maxAge: 5 * 24 * 60 * 60 * 1000,  // Token expiration time (5 days)
-      sameSite: 'Strict',  // Or 'None' if cross-origin requests are involved
-    });
-
-    // Redirect to the originally requested page or home
-    const redirectTo = req.query.direct || '/';
-    return res.redirect(redirectTo);
+    try {
+      const token = jwt.sign({ username, id: user.id }, JWT_KEY, { expiresIn: "5d" });
+      res.cookie("auth_token", token, {
+        httpOnly: true,
+        secure: true,
+        maxAge: 5 * 24 * 60 * 60 * 1000,
+        sameSite: 'None',
+      });
+      const redirectTo = req.query.direct || '/';
+      return res.redirect(redirectTo);
+    } catch (error) {
+      console.error("Error signing JWT:", error);
+      res.render("login", { message: "Something went wrong, try again later." });
+    }
   } else {
     // Invalid credentials
     res.render("login", { message: "Invalid credentials, try again." });
