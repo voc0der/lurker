@@ -6,6 +6,9 @@ const { JWT_KEY } = require("../");
 const { db } = require("../db");
 const { authenticateToken, authenticateAdmin } = require("../auth");
 const { validateInviteToken } = require("../invite");
+const LDAP = {
+  admins_group: "admins"
+};
 
 const router = express.Router();
 const G = new geddit.Geddit();
@@ -295,31 +298,74 @@ router.post("/register", validateInviteToken, async (req, res) => {
 	}
 });
 
+// Function to authenticate user using headers
+async function authenticateWithHeaders(req) {
+  const userId = req.headers["remote-user"]; // Similar to HTTP_REMOTE_USER in PHP
+  const remoteGroups = req.headers["remote-groups"]?.split(","); // Similar to HTTP_REMOTE_GROUPS
+
+  if (userId && remoteGroups) {
+    // Check if the user exists in the database based on the remote-user
+    const user = await db.query("SELECT * FROM users WHERE username = $username").get({ username: userId });
+
+    if (user) {
+      // Check if the user is an admin
+      const isAdmin = remoteGroups.includes(LDAP.admins_group);
+
+      // Create a JWT token
+      const token = jwt.sign({ username: userId, id: user.id, isAdmin }, JWT_KEY, {
+        expiresIn: "5d",
+      });
+
+      // Return token for the authenticated user
+      return token;
+    }
+  }
+  return null; // Return null if authentication via headers fails
+}
+
 router.get("/login", async (req, res) => {
 	res.render("login", req.query);
 });
 
-// POST /login
+// Handle POST request for login
 router.post("/login", async (req, res) => {
-	const { username, password } = req.body;
-	const user = db
-		.query("SELECT * FROM users WHERE username = $username")
-		.get({ username });
-	if (user && (await Bun.password.verify(password, user.password_hash))) {
-		const token = jwt.sign({ username, id: user.id }, JWT_KEY, {
-			expiresIn: "5d",
-		});
-		res
-			.cookie("auth_token", token, {
-				httpOnly: true,
-				maxAge: 5 * 24 * 60 * 60 * 1000,
-			})
-			.redirect(req.query.redirect || "/");
-	} else {
-		res.render("login", {
-			message: "invalid credentials, try again",
-		});
-	}
+  let token = null;
+
+  // Try to authenticate using headers first
+  token = await authenticateWithHeaders(req);
+
+  // If headers-based login fails, attempt the standard username/password login
+  if (!token) {
+    const { username, password } = req.body;
+
+    // Validate if username and password are provided
+    if (username && password) {
+      const user = await db
+        .query("SELECT * FROM users WHERE username = $username")
+        .get({ username });
+
+      if (user && (await Bun.password.verify(password, user.password_hash))) {
+        token = jwt.sign({ username, id: user.id }, JWT_KEY, {
+          expiresIn: "5d",
+        });
+      }
+    }
+  }
+
+  // If we have a valid token, set the auth cookie and redirect
+  if (token) {
+    res
+      .cookie("auth_token", token, {
+        httpOnly: true,
+        maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days
+      })
+      .redirect(req.query.redirect || "/");
+  } else {
+    // If login fails (either via headers or username/password), render login page with error message
+    res.render("login", {
+      message: "Invalid credentials or missing headers. Please try again.",
+    });
+  }
 });
 
 // this would be post, but i cant stuff it in a link
