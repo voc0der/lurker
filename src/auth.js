@@ -11,7 +11,7 @@ function logTokenError(message, error) {
 function authenticateToken(req, res, next) {
   const token = req.cookies && req.cookies.auth_token;
   const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
-  const isAdmin = remoteGroups.includes('admin');
+  const isAdmin = remoteGroups.includes('admin') ? 1 : 0;
 
   if (!token) {
     console.log("No token found, redirecting to login.");
@@ -60,10 +60,9 @@ function authenticateToken(req, res, next) {
 
 // Middleware to authenticate admin (checks if user has admin privileges)
 function authenticateAdmin(req, res, next) {
-  console.log('---REQ1---');
-  console.log(req);
-  
   const token = req.cookies && req.cookies.auth_token;
+  const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
+  const isAdmin = remoteGroups.includes('admin') ? 1 : 0;
 
   if (!token) {
     console.log("No token found, redirecting to login for admin.");
