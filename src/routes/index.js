@@ -94,15 +94,22 @@ router.post("/login", async (req, res) => {
   const user = db.query("SELECT * FROM users WHERE username = $username").get({ username });
 
   if (user && (await Bun.password.verify(password, user.password_hash))) {
-    // Password matches, create JWT token and store it in the cookie
+    // Create the JWT token
     const token = jwt.sign({ username, id: user.id }, JWT_KEY, { expiresIn: "5d" });
-    res.cookie("auth_token", token, { httpOnly: true, maxAge: 5 * 24 * 60 * 60 * 1000 });  // Store JWT in cookies
 
-    // Redirect to the page user was originally trying to visit, or home if not provided
+    // Set the token in the cookie
+    res.cookie("auth_token", token, {
+      httpOnly: true,  // Prevent client-side access
+      secure: process.env.NODE_ENV === 'production',  // Only secure in production (requires HTTPS)
+      maxAge: 5 * 24 * 60 * 60 * 1000,  // Token expiration time (5 days)
+      sameSite: 'Strict',  // Or 'None' if cross-origin requests are involved
+    });
+
+    // Redirect to the originally requested page or home
     const redirectTo = req.query.direct || '/';
     return res.redirect(redirectTo);
   } else {
-    // Invalid credentials, show error message
+    // Invalid credentials
     res.render("login", { message: "Invalid credentials, try again." });
   }
 });
