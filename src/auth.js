@@ -9,6 +9,9 @@ function logTokenError(message, error) {
 
 // Middleware to authenticate using JWT token (from cookies)
 function authenticateToken(req, res, next) {
+  console.log('---REQ1---');
+  console.log(req);
+  
   const token = req.cookies && req.cookies.auth_token;
 
   if (!token) {
@@ -58,6 +61,9 @@ function authenticateToken(req, res, next) {
 
 // Middleware to authenticate admin (checks if user has admin privileges)
 function authenticateAdmin(req, res, next) {
+  console.log('---REQ1---');
+  console.log(req);
+  
   const token = req.cookies && req.cookies.auth_token;
 
   if (!token) {
