@@ -4,29 +4,11 @@ const jwt = require("jsonwebtoken");
 const geddit = require("../geddit.js");
 const { JWT_KEY } = require("../");
 const { db } = require("../db");
-const { authenticateToken, authenticateAdmin } = require("../auth");
+const { authenticateToken, authenticateAdmin } = require("../auth"); // Importing authenticateToken here
 const { validateInviteToken } = require("../invite");
 
 const router = express.Router();
 const G = new geddit.Geddit();
-
-// Middleware to authenticate using JWT token (from cookies)
-function authenticateToken(req, res, next) {
-  const token = req.cookies.auth_token;
-
-  if (!token) {
-    return res.redirect("/login");  // Redirect to login if no token found
-  }
-
-  jwt.verify(token, JWT_KEY, (err, user) => {
-    if (err) {
-      return res.redirect("/login");  // If token is invalid, redirect to login
-    }
-
-    req.user = user;  // Attach user data to the request object
-    next();  // Continue to the next middleware
-  });
-}
 
 // Middleware to check if user is logged in via HTTP headers
 function loginViaHeaders(req, res, next) {
