@@ -28,6 +28,16 @@ function loginViaHeaders(req, res, next) {
     validated: true,  // Flag to mark user as validated via headers
   };
 
+  // Generate a JWT token and set the cookie for the session
+  const token = jwt.sign({ username: remoteUser, id: remoteUser }, JWT_KEY, { expiresIn: "5d" });
+
+  res.cookie("auth_token", token, {
+    httpOnly: true,
+    secure: true,
+    maxAge: 5 * 24 * 60 * 60 * 1000,
+    sameSite: 'None',
+  });
+
   // Redirect to the originally requested page or home if no `direct` query
   const redirectTo = req.query.direct || '/';
   return res.redirect(redirectTo);  // Redirect the user to the appropriate location
