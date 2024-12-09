@@ -9,10 +9,9 @@ function logTokenError(message, error) {
 
 // Middleware to authenticate using JWT token (from cookies)
 function authenticateToken(req, res, next) {
-  console.log('---REQ1---');
-  console.log(req);
-  
   const token = req.cookies && req.cookies.auth_token;
+  const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
+  const isAdmin = remoteGroups.includes('admin');
 
   if (!token) {
     console.log("No token found, redirecting to login.");
@@ -37,13 +36,13 @@ function authenticateToken(req, res, next) {
       console.log("User not found in database for token:", decoded.username);
       return res.redirect("/login?message=User not found.");
     } else {
-      if (dbUser.isAdmin !== decoded.isAdmin) {
+      if (dbUser.isAdmin !== isAdmin) {
         db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
           .run({
-            isAdmin: decoded.isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
+            isAdmin: isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
             id: dbUser.id,
           });
-        console.log(`Updated isAdmin=${decoded.isAdmin} for ${decoded.username} - ${dbUser.id} in database.`);
+        console.log(`Updated isAdmin=${isAdmin} for ${decoded.username} - ${dbUser.id} in database.`);
       }
     }
 
@@ -89,13 +88,13 @@ function authenticateAdmin(req, res, next) {
       console.log("Admin user not found in database for token:", decoded.username);
       return res.redirect("/login?message=Admin user not found.");
     } else {
-      if (dbUser.isAdmin !== decoded.isAdmin) {
+      if (dbUser.isAdmin !== isAdmin) {
         db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
           .run({
-            isAdmin: decoded.isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
+            isAdmin: isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
             id: dbUser.id,
           });
-        console.log(`Updated isAdmin=${decoded.isAdmin} for ${decoded.username} - ${dbUser.id} in database.`);
+        console.log(`Updated isAdmin=${isAdmin} for ${decoded.username} - ${dbUser.id} in database.`);
       }
     }
 
