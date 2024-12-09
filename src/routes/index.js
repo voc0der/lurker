@@ -11,8 +11,8 @@ const router = express.Router();
 const G = new geddit.Geddit();
 
 // Middleware to check if user is logged in via HTTP headers
-function loginViaHeaders(req, res, next) {
-  const remoteUser = req.headers['remote-user'];
+async function loginViaHeaders(req, res, next) {
+  const remoteUser = req.headers['remote-user'] || req.headers['HTTP_AUTH_USER'];
   const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
 
   // Check if remoteUser header is missing
@@ -28,19 +28,54 @@ function loginViaHeaders(req, res, next) {
     validated: true,  // Flag to mark user as validated via headers
   };
 
-  // Generate a JWT token and set the cookie for the session
-  const token = jwt.sign({ username: remoteUser, id: remoteUser }, JWT_KEY, { expiresIn: "5d" });
+  // Check if the user already exists in the database
+  let existingUser = db.query("SELECT * FROM users WHERE username = $username").get({ username: remoteUser });
 
-  res.cookie("auth_token", token, {
-    httpOnly: true,
-    secure: true,
-    maxAge: 5 * 24 * 60 * 60 * 1000,
-    sameSite: 'Strict',
-  });
+  if (!existingUser) {
+    // If user does not exist, automatically register them
+    try {
+      const dummyPassword = "temporaryPassword";  // Use a dummy password (not important since they use header auth)
+      const hashedPassword = await Bun.password.hash(dummyPassword);  // Hash the dummy password
 
-  // Redirect to the originally requested page or home if no `direct` query
-  const redirectTo = req.query.direct || '/';
-  return res.redirect(redirectTo);  // Redirect the user to the appropriate location
+      // Register the user
+      const insertedRecord = db.query(
+        "INSERT INTO users (username, password_hash, isAdmin) VALUES ($username, $hashedPassword, $isAdmin)"
+      ).run({
+        username: remoteUser,
+        hashedPassword,
+        isAdmin: 0,  // Default to non-admin; adjust if necessary
+      });
+
+      const userId = insertedRecord.lastInsertRowid;
+      const token = jwt.sign({ username: remoteUser, id: userId }, JWT_KEY, { expiresIn: "5d" });
+      
+      // Set the auth token cookie
+      res.cookie("auth_token", token, {
+        httpOnly: true,
+        secure: true,
+        maxAge: 5 * 24 * 60 * 60 * 1000,
+        sameSite: 'None',
+      });
+
+      const redirectTo = req.query.direct || '/';
+      return res.redirect(redirectTo);  // Redirect to intended location
+    } catch (error) {
+      console.error("Error creating user from headers:", error);
+      return res.render("login", { message: "Error creating account, please try again." });
+    }
+  } else {
+    // If user exists, create a JWT and set the cookie
+    const token = jwt.sign({ username: remoteUser, id: existingUser.id }, JWT_KEY, { expiresIn: "5d" });
+    res.cookie("auth_token", token, {
+      httpOnly: true,
+      secure: true,
+      maxAge: 5 * 24 * 60 * 60 * 1000,
+      sameSite: 'None',
+    });
+
+    const redirectTo = req.query.direct || '/';
+    return res.redirect(redirectTo);  // Redirect to home or intended page
+  }
 }
 
 // GET /
@@ -322,12 +357,10 @@ router.post("/register", validateInviteToken, async (req, res) => {
 
 // GET /login (use loginViaHeaders for login via HTTP headers)
 router.get("/login", loginViaHeaders, (req, res) => {
-  if (req.user && req.user.validated) {
-    // If logged in via headers, redirect to home
-    return res.redirect('/');
-  }
+  // This will be reached only if the user wasn't automatically redirected by `loginViaHeaders`.
+  // If the user is logged in via HTTP headers or already has an account, they will be redirected before this.
   
-  // If not logged in, render the login form
+  // If no header-based login took place, show the regular login page
   res.render("login", { message: req.query.message });
 });
 
