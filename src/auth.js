@@ -39,7 +39,7 @@ function authenticateToken(req, res, next) {
       if (dbUser.isAdmin !== isAdmin) {
         db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
           .run({
-            isAdmin: isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
+            isAdmin: isAdmin,  // Update to 1 for admin, 0 for non-admin
             id: dbUser.id,
           });
         console.log(`Updated isAdmin=${isAdmin} for ${decoded.username} - ${dbUser.id} in database.`);
@@ -90,7 +90,7 @@ function authenticateAdmin(req, res, next) {
       if (dbUser.isAdmin !== isAdmin) {
         db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
           .run({
-            isAdmin: isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
+            isAdmin: isAdmin,  // Update to 1 for admin, 0 for non-admin
             id: dbUser.id,
           });
         console.log(`Updated isAdmin=${isAdmin} for ${decoded.username} - ${dbUser.id} in database.`);
