@@ -73,6 +73,15 @@ async function loginViaHeaders(req, res, next) {
       return res.render("login", { message: "Error creating account, please try again." });
     }
   } else {
+    // Check if the isAdmin value in the database matches the remote header
+    if (existingUser.isAdmin !== req.user.isAdmin) {
+      // Update the user's isAdmin field to match the header
+      db.query("UPDATE users SET isAdmin = $isAdmin WHERE username = $username")
+        .run({
+          isAdmin: req.user.isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
+          username: remoteUser,
+        });
+    }
     setAuthTokenCookie(res, remoteUser, existingUser.id);
     const redirectTo = req.query.direct || '/';
     return res.redirect(redirectTo);  // Redirect to home or intended page
