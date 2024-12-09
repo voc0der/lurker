@@ -174,12 +174,6 @@ router.get("/subs", authenticateToken, async (req, res) => {
 	const subs = db
 		.query("SELECT * FROM subscriptions WHERE user_id = $id")
 		.all({ id: req.user.id });
-
-	console.log(req.user);
-	subs.forEach(sub => {
-	  console.log(sub); // Log each subscription object
-	});
-	
 	res.render("subs", { subs, user: req.user });
 });
 
