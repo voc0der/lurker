@@ -7,6 +7,10 @@ const app = express();
 const hasher = new Bun.CryptoHasher("sha256", "secret-key");
 const JWT_KEY = process.env.JWT_SECRET_KEY || hasher.update(Math.random().toString()).digest("hex");
 
+// Log to verify the JWT_SECRET_KEY is loaded
+console.log("JWT_SECRET_KEY:", process.env.JWT_SECRET_KEY);
+console.log("Using JWT_KEY:", JWT_KEY);  // This is the key that will be used for signing and verifying the JWT
+
 module.exports = { JWT_KEY };
 
 app.set("views", path.join(__dirname, "views"));
