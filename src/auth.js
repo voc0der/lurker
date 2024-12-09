@@ -40,7 +40,7 @@ function authenticateToken(req, res, next) {
             isAdmin: decoded.isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
             id: dbUser.id,
           });
-        console.log(`Updated isAdmin for ${decoded.username} in database.`);
+        console.log(`Updated isAdmin=${decoded.isAdmin} for ${decoded.username} - ${dbUser.id} in database.`);
       }
     }
 
@@ -89,7 +89,7 @@ function authenticateAdmin(req, res, next) {
             isAdmin: decoded.isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
             id: dbUser.id,
           });
-        console.log(`Updated isAdmin for ${decoded.username} in database.`);
+        console.log(`Updated isAdmin=${decoded.isAdmin} for ${decoded.username} - ${dbUser.id} in database.`);
       }
     }
 
