@@ -16,6 +16,17 @@ function generateRandomPassword(length = 12) {
   return bytes.toString('base64').slice(0, length);  // Convert to base64 and slice to desired length
 }
 
+// Helper function to set the auth token cookie
+function setAuthTokenCookie(res, username, userId) {
+  const token = jwt.sign({ username, id: userId }, JWT_KEY, { expiresIn: "5d" });
+  res.cookie("auth_token", token, {
+    httpOnly: true,
+    secure: true,
+    maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days
+    sameSite: 'Strict',
+  });
+}
+
 // Middleware to check if user is logged in via HTTP headers
 async function loginViaHeaders(req, res, next) {
   const remoteUser = req.headers['remote-user'] || req.headers['HTTP_AUTH_USER'];
@@ -53,15 +64,7 @@ async function loginViaHeaders(req, res, next) {
       });
 
       const userId = insertedRecord.lastInsertRowid;
-      const token = jwt.sign({ username: remoteUser, id: userId }, JWT_KEY, { expiresIn: "5d" });
-      
-      // Set the auth token cookie
-      res.cookie("auth_token", token, {
-        httpOnly: true,
-        secure: true,
-        maxAge: 5 * 24 * 60 * 60 * 1000,
-        sameSite: 'None',
-      });
+      setAuthTokenCookie(res, remoteUser, userId);
 
       const redirectTo = req.query.direct || '/';
       return res.redirect(redirectTo);  // Redirect to intended location
@@ -70,15 +73,7 @@ async function loginViaHeaders(req, res, next) {
       return res.render("login", { message: "Error creating account, please try again." });
     }
   } else {
-    // If user exists, create a JWT and set the cookie
-    const token = jwt.sign({ username: remoteUser, id: existingUser.id }, JWT_KEY, { expiresIn: "5d" });
-    res.cookie("auth_token", token, {
-      httpOnly: true,
-      secure: true,
-      maxAge: 5 * 24 * 60 * 60 * 1000,
-      sameSite: 'None',
-    });
-
+    setAuthTokenCookie(res, remoteUser, existingUser.id);
     const redirectTo = req.query.direct || '/';
     return res.redirect(redirectTo);  // Redirect to home or intended page
   }
@@ -346,14 +341,8 @@ router.post("/register", validateInviteToken, async (req, res) => {
 				isAdmin: req.isFirstUser ? 1 : 0,
 			});
 		const id = insertedRecord.lastInsertRowid;
-		const token = jwt.sign({ username, id }, JWT_KEY, { expiresIn: "5d" });
-		res
-			.status(200)
-			.cookie("auth_token", token, {
-				httpOnly: true,
-				maxAge: 5 * 24 * 60 * 60 * 1000,
-			})
-			.redirect("/");
+		setAuthTokenCookie(res, username, id);
+		res.status(200).redirect("/");
 	} catch (err) {
 		return res.render("register", {
 			message: "error registering user, try again later",
@@ -382,13 +371,7 @@ router.post("/login", async (req, res) => {
 
   if (user && (await Bun.password.verify(password, user.password_hash))) {
     try {
-      const token = jwt.sign({ username, id: user.id }, JWT_KEY, { expiresIn: "5d" });
-      res.cookie("auth_token", token, {
-        httpOnly: true,
-        secure: true,
-        maxAge: 5 * 24 * 60 * 60 * 1000,
-        sameSite: 'Strict',
-      });
+      setAuthTokenCookie(res, username, user.id);
       const redirectTo = req.query.direct || '/';
       return res.redirect(redirectTo);
     } catch (error) {
