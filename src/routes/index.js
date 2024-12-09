@@ -42,7 +42,7 @@ async function loginViaHeaders(req, res, next) {
   // If remoteUser is present, set user info and validate
   req.user = {
     username: remoteUser,  // Store username in req.user
-    isAdmin: remoteGroups.includes('admins'),  // Check if user is an admin
+    isAdmin: remoteGroups.includes('admin'),  // Check if user is an admin
     validated: true,  // Flag to mark user as validated via headers
   };
   console.log('~debug marker~');
