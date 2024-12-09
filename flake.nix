@@ -41,7 +41,10 @@
             cp -R ./node_modules/* $out/node_modules
             ls -la $out/node_modules
           '';
-          outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8="; # Fixed hash
+          # Correct hash for node_modules directory content
+          outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8="; # Use the correct hash
+          outputHashAlgo = "sha256"; # Optional, unless you want specific hashing behavior
+          outputHashMode = "recursive"; # Ensure it's recursive if needed for nested directories
         };
       lurker = with final;
         stdenv.mkDerivation {
