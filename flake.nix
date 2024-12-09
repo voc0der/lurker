@@ -41,7 +41,8 @@
             cp -R ./node_modules/* $out/node_modules
             ls -la $out/node_modules
           '';
-          # Place the hash attributes here in the correct position
+          
+          # Correct placement of outputHash attributes within the mkDerivation block
           outputHash = "sha256-UiD/gqwaU1+qLNkeds2i7kVgCjlrgxsTcqQDbO8+gG8=";
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
