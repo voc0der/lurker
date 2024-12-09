@@ -325,10 +325,6 @@ router.get("/login", loginViaHeaders, (req, res) => {
   res.render("login", { message: req.query.message });
 });
 
-router.get("/login", async (req, res) => {
-	res.render("login", req.query);
-});
-
 // POST /login (form submission)
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
