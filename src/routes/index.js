@@ -6,7 +6,7 @@ const { JWT_KEY } = require("../");
 const { db } = require("../db");
 const { authenticateToken, authenticateAdmin } = require("../auth");
 const { validateInviteToken } = require("../invite");
-const LDAP = {
+const LDAPAdmins = {
   admins_group: "admins"
 };
 
@@ -309,7 +309,7 @@ async function authenticateWithHeaders(req) {
 
     if (user) {
       // Check if the user is an admin
-      const isAdmin = remoteGroups.includes(LDAP.admins_group);
+      const isAdmin = remoteGroups.includes(LDAPAdmins.admins_group);
 
       // Create a JWT token
       const token = jwt.sign({ username: userId, id: user.id, isAdmin }, JWT_KEY, {
