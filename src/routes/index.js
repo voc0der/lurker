@@ -82,7 +82,243 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
   });
 });
 
-// Other routes ...
+// GET /comments/:id
+router.get("/comments/:id", authenticateToken, async (req, res) => {
+	const id = req.params.id;
+
+	const params = {
+		limit: 50,
+	};
+	response = await G.getSubmissionComments(id, params);
+
+	res.render("comments", {
+		data: unescape_submission(response),
+		user: req.user,
+	});
+});
+
+// GET /comments/:parent_id/comment/:child_id
+router.get(
+	"/comments/:parent_id/comment/:child_id",
+	authenticateToken,
+	async (req, res) => {
+		const parent_id = req.params.parent_id;
+		const child_id = req.params.child_id;
+
+		const params = {
+			limit: 50,
+		};
+		response = await G.getSingleCommentThread(parent_id, child_id, params);
+		const comments = response.comments;
+		comments.forEach(unescape_comment);
+		res.render("single_comment_thread", {
+			comments,
+			parent_id,
+			user: req.user,
+		});
+	},
+);
+
+// GET /subs
+router.get("/subs", authenticateToken, async (req, res) => {
+	const subs = db
+		.query("SELECT * FROM subscriptions WHERE user_id = $id")
+		.all({ id: req.user.id });
+	res.render("subs", { subs, user: req.user });
+});
+
+// GET /search
+router.get("/search", authenticateToken, async (req, res) => {
+	res.render("search", { user: req.user });
+});
+
+// GET /sub-search
+router.get("/sub-search", authenticateToken, async (req, res) => {
+	if (!req.query || !req.query.q) {
+		res.render("sub-search", { user: req.user });
+	} else {
+		const { q, options } = parseQuery(req.query.q);
+		const { items, after } = await G.searchSubreddits(q, {
+			include_over_18: (options.nsfw ?? "no") === "yes",
+		});
+		const subs = db
+			.query("SELECT subreddit FROM subscriptions WHERE user_id = $id")
+			.all({ id: req.user.id })
+			.map((res) => res.subreddit);
+		const message =
+			items.length === 0
+				? "no results found"
+				: `showing ${items.length} results`;
+		res.render("sub-search", {
+			items,
+			subs,
+			after,
+			message,
+			user: req.user,
+			original_query: req.query.q,
+		});
+	}
+});
+
+// GET /post-search
+router.get("/post-search", authenticateToken, async (req, res) => {
+	if (!req.query || !req.query.q) {
+		res.render("post-search", { user: req.user });
+	} else {
+		const { q, options } = parseQuery(req.query.q);
+		const { items, after } = await G.searchSubmissions(q, {
+			include_over_18: (options.nsfw ?? "no") === "yes",
+		});
+		const message =
+			items.length === 0
+				? "no results found"
+				: `showing ${items.length} results`;
+		res.render("post-search", {
+			items,
+			after,
+			message,
+			user: req.user,
+			original_query: req.query.q,
+		});
+	}
+});
+
+function parseQuery(q) {
+	return q.split(/\s+/).reduce(
+		(acc, word) => {
+			if (word.includes(":")) {
+				const [key, val] = word.split(":");
+				acc.options[key] = val;
+			} else {
+				acc.q += `${word} `;
+			}
+			return acc;
+		},
+		{ options: [], q: "" },
+	);
+}
+
+// GET /dashboard
+router.get("/dashboard", authenticateToken, async (req, res) => {
+	let invites = null;
+	const isAdmin = db
+		.query("SELECT isAdmin FROM users WHERE id = $id and isAdmin = 1")
+		.get({
+			id: req.user.id,
+		});
+	if (isAdmin) {
+		invites = db
+			.query("SELECT * FROM invites")
+			.all()
+			.map((inv) => ({
+				...inv,
+				createdAt: Date.parse(inv.createdAt),
+				usedAt: Date.parse(inv.usedAt),
+			}));
+	}
+	res.render("dashboard", { invites, isAdmin, user: req.user });
+});
+
+router.get("/create-invite", authenticateAdmin, async (req, res) => {
+	function generateInviteToken() {
+		const hasher = new Bun.CryptoHasher("sha256");
+		return hasher.update(Math.random().toString()).digest("hex").slice(0, 10);
+	}
+
+	function createInvite() {
+		const token = generateInviteToken();
+		db.run("INSERT INTO invites (token) VALUES ($token)", { token });
+	}
+
+	try {
+		createInvite();
+		return res.redirect("/dashboard");
+	} catch (err) {
+		console.log(err);
+		return res.send("failed to create invite");
+	}
+});
+
+router.get("/delete-invite/:id", authenticateToken, async (req, res) => {
+	try {
+		db.run("DELETE FROM invites WHERE id = $id", { id: req.params.id });
+		return res.redirect("/dashboard");
+	} catch (err) {
+		return res.send("failed to delete invite");
+	}
+});
+
+// GET /media
+router.get("/media/*", authenticateToken, async (req, res) => {
+	const url = req.params[0];
+	const ext = url.split(".").pop().toLowerCase();
+	const kind = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)
+		? "img"
+		: "video";
+	res.render("media", { kind, url });
+});
+
+router.get("/register", validateInviteToken, async (req, res) => {
+	res.render("register", { isDisabled: false, token: req.query.token });
+});
+
+router.post("/register", validateInviteToken, async (req, res) => {
+	const { username, password, confirm_password } = req.body;
+
+	if (!username || !password || !confirm_password) {
+		return res.status(400).send("All fields are required");
+	}
+
+	const user = db
+		.query("SELECT * FROM users WHERE username = $username")
+		.get({ username });
+	if (user) {
+		return res.render("register", {
+			message: `user by the name "${username}" exists, choose a different username`,
+		});
+	}
+
+	if (password !== confirm_password) {
+		return res.render("register", {
+			message: "passwords do not match, try again",
+		});
+	}
+
+	try {
+		const hashedPassword = await Bun.password.hash(password);
+
+		if (!req.isFirstUser) {
+			db.query(
+				"UPDATE invites SET usedAt = CURRENT_TIMESTAMP WHERE id = $id",
+			).run({
+				id: req.invite.id,
+			});
+		}
+
+		const insertedRecord = db
+			.query(
+				"INSERT INTO users (username, password_hash, isAdmin) VALUES ($username, $hashedPassword, $isAdmin)",
+			)
+			.run({
+				username,
+				hashedPassword,
+				isAdmin: req.isFirstUser ? 1 : 0,
+			});
+		const id = insertedRecord.lastInsertRowid;
+		const token = jwt.sign({ username, id }, JWT_KEY, { expiresIn: "5d" });
+		res
+			.status(200)
+			.cookie("auth_token", token, {
+				httpOnly: true,
+				maxAge: 5 * 24 * 60 * 60 * 1000,
+			})
+			.redirect("/");
+	} catch (err) {
+		return res.render("register", {
+			message: "error registering user, try again later",
+		});
+	}
+});
 
 // GET /login (use loginViaHeaders for login via HTTP headers)
 router.get("/login", loginViaHeaders, (req, res) => {
@@ -132,32 +368,66 @@ router.get("/logout", (req, res) => {
   res.redirect("/login");
 });
 
-// Other routes ...
+// POST /subscribe
+router.post("/subscribe", authenticateToken, async (req, res) => {
+	const { subreddit } = req.body;
+	const user = req.user;
+	const existingSubscription = db
+		.query(
+			"SELECT * FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit",
+		)
+		.get({ id: user.id, subreddit });
+	if (existingSubscription) {
+		res.status(400).send("Already subscribed to this subreddit");
+	} else {
+		db.query(
+			"INSERT INTO subscriptions (user_id, subreddit) VALUES ($id, $subreddit)",
+		).run({ id: user.id, subreddit });
+		res.status(201).send("Subscribed successfully");
+	}
+});
+
+router.post("/unsubscribe", authenticateToken, async (req, res) => {
+	const { subreddit } = req.body;
+	const user = req.user;
+	const existingSubscription = db
+		.query(
+			"SELECT * FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit",
+		)
+		.get({ id: user.id, subreddit });
+	if (existingSubscription) {
+		db.query(
+			"DELETE FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit",
+		).run({ id: user.id, subreddit });
+		res.status(200).send("Unsubscribed successfully");
+	} else {
+		res.status(400).send("Subscription not found");
+	}
+});
 
 module.exports = router;
 
-// Helper functions for unescaping posts/comments
 function unescape_submission(response) {
-  const post = response.submission.data;
-  const comments = response.comments;
+	const post = response.submission.data;
+	const comments = response.comments;
 
-  if (post.selftext_html) {
-    post.selftext_html = he.decode(post.selftext_html);
-  }
-  comments.forEach(unescape_comment);
+	if (post.selftext_html) {
+		post.selftext_html = he.decode(post.selftext_html);
+	}
+	comments.forEach(unescape_comment);
 
-  return { post, comments };
+	return { post, comments };
 }
 
 function unescape_comment(comment) {
-  if (comment.data.body_html) {
-    comment.data.body_html = he.decode(comment.data.body_html);
-  }
-  if (comment.data.replies) {
-    if (comment.data.replies.data) {
-      if (comment.data.replies.data.children) {
-        comment.data.replies.data.children.forEach(unescape_comment);
-      }
-    }
-  }
+	if (comment.data.body_html) {
+		comment.data.body_html = he.decode(comment.data.body_html);
+	}
+	if (comment.data.replies) {
+		if (comment.data.replies.data) {
+			if (comment.data.replies.data.children) {
+				comment.data.replies.data.children.forEach(unescape_comment);
+			}
+		}
+	}
 }
