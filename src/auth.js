@@ -31,7 +31,7 @@ function authenticateToken(req, res, next) {
     }
 
     if (!dbUser) {
-      console.log("User not found in database for token:", decoded.id);
+      console.log("User not found in database for token:", decoded.username);
       return res.redirect("/login?message=User not found.");
     }
 
@@ -64,14 +64,14 @@ function authenticateAdmin(req, res, next) {
     // Check if user exists in the database
     let dbUser;
     try {
-      dbUser = db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
+      dbUser = db.query("SELECT * FROM users WHERE username = $username").get({ username: decoded.username });
     } catch (err) {
       console.log("Database error:", err);
       return res.redirect("/login?message=Database error.");
     }
 
     if (!dbUser) {
-      console.log("Admin user not found in database for token:", decoded.id);
+      console.log("Admin user not found in database for token:", decoded.username);
       return res.redirect("/login?message=Admin user not found.");
     }
 
