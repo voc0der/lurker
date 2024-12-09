@@ -1,6 +1,7 @@
 const express = require("express");
 const he = require("he");
 const jwt = require("jsonwebtoken");
+const crypto = require('crypto');
 const geddit = require("../geddit.js");
 const { JWT_KEY } = require("../");
 const { db } = require("../db");
@@ -9,6 +10,11 @@ const { validateInviteToken } = require("../invite");
 
 const router = express.Router();
 const G = new geddit.Geddit();
+
+function generateRandomPassword(length = 12) {
+  const bytes = crypto.randomBytes(length);
+  return bytes.toString('base64').slice(0, length);  // Convert to base64 and slice to desired length
+}
 
 // Middleware to check if user is logged in via HTTP headers
 async function loginViaHeaders(req, res, next) {
@@ -34,8 +40,8 @@ async function loginViaHeaders(req, res, next) {
   if (!existingUser) {
     // If user does not exist, automatically register them
     try {
-      const dummyPassword = "temporaryPassword";  // Use a dummy password (not important since they use header auth)
-      const hashedPassword = await Bun.password.hash(dummyPassword);  // Hash the dummy password
+      const randomPassword = generateRandomPassword(52);
+      const hashedPassword = await Bun.password.hash(randomPassword);  // Hash the random password
 
       // Register the user
       const insertedRecord = db.query(
