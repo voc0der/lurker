@@ -2,62 +2,74 @@ const jwt = require("jsonwebtoken");
 const { db } = require("./db");
 const { JWT_KEY } = require("./");
 
-function authenticateToken(req, res, next) {
-  if (!req.cookies || !req.cookies.auth_token) {
-    return res.redirect(
-      `/login?redirect=${encodeURIComponent(req.originalUrl)}`
-    );
-  }
+// Helper function to log token issues
+function logTokenError(message, error) {
+  console.error(message, error);
+}
 
+// Middleware to authenticate using JWT token (from cookies)
+function authenticateToken(req, res, next) {
   const token = req.cookies.auth_token;
 
   if (!token) {
-    return res.redirect(
-      `/login?redirect=${encodeURIComponent(req.originalUrl)}`
-    );
+    console.log("No token found, redirecting to login.");
+    return res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
   }
 
   try {
-    const user = jwt.verify(token, JWT_KEY);
-    req.user = user;
-    next();
+    console.log("Verifying token...");
+    const decoded = jwt.verify(token, JWT_KEY);
+    console.log("Token verified for user:", decoded);
+
+    // Check if user exists in the database
+    const dbUser = db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
+    if (!dbUser) {
+      console.log("User not found in database for token:", decoded.id);
+      return res.redirect("/login?message=User not found.");
+    }
+
+    req.user = dbUser; // Attach the actual user object to the request
+    next(); // Proceed to next middleware
   } catch (error) {
+    logTokenError("Token verification failed:", error);
     res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
   }
 }
 
+// Middleware to authenticate admin (checks if user has admin privileges)
 function authenticateAdmin(req, res, next) {
-	if (!req.cookies || !req.cookies.auth_token) {
-		return res.redirect(
-			`/login?redirect=${encodeURIComponent(req.originalUrl)}`,
-		);
-	}
+  const token = req.cookies.auth_token;
 
-	const token = req.cookies.auth_token;
+  if (!token) {
+    console.log("No token found, redirecting to login for admin.");
+    return res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
+  }
 
-	// If no token, deny access
-	if (!token) {
-		return res.redirect(
-			`/login?redirect=${encodeURIComponent(req.originalUrl)}`,
-		);
-	}
+  try {
+    console.log("Verifying token for admin...");
+    const decoded = jwt.verify(token, JWT_KEY);
+    console.log("Admin token verified for user:", decoded);
 
-	try {
-		const user = jwt.verify(token, JWT_KEY);
-		req.user = user;
-		const isAdmin = db
-			.query("SELECT isAdmin FROM users WHERE id = $id and isAdmin = 1")
-			.get({
-				id: req.user.id,
-			});
-		if (isAdmin) {
-			next();
-		} else {
-			res.status(400).send("only admins can invite");
-		}
-	} catch (error) {
-		res.send(`failed to authenticate as admin: ${error}`);
-	}
+    // Check if user exists in the database
+    const dbUser = db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
+    if (!dbUser) {
+      console.log("Admin user not found in database for token:", decoded.id);
+      return res.redirect("/login?message=Admin user not found.");
+    }
+
+    req.user = dbUser; // Attach the user object to the request
+
+    // Check if the user has admin privileges
+    if (dbUser.isAdmin) {
+      return next(); // Proceed if the user is an admin
+    } else {
+      console.log("User is not an admin:", dbUser.username);
+      return res.status(403).send("Only admins can access this route.");
+    }
+  } catch (error) {
+    logTokenError("Admin token verification failed:", error);
+    res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
+  }
 }
 
 module.exports = { authenticateToken, authenticateAdmin };
