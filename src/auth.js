@@ -35,10 +35,10 @@ function authenticateToken(req, res, next) {
       return res.redirect("/login?message=User not found.");
     } else {
       if (dbUser.isAdmin !== decoded.isAdmin) {
-        db.query("UPDATE users SET isAdmin = $isAdmin WHERE username = $username")
+        db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
           .run({
             isAdmin: decoded.isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
-            username: decoded.username,
+            id: dbUser.id,
           });
         console.log(`Updated isAdmin for ${decoded.username} in database.`);
       }
@@ -84,10 +84,10 @@ function authenticateAdmin(req, res, next) {
       return res.redirect("/login?message=Admin user not found.");
     } else {
       if (dbUser.isAdmin !== decoded.isAdmin) {
-        db.query("UPDATE users SET isAdmin = $isAdmin WHERE username = $username")
+        db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
           .run({
             isAdmin: decoded.isAdmin ? 1 : 0,  // Update to 1 for admin, 0 for non-admin
-            username: decoded.username,
+            id: dbUser.id,
           });
         console.log(`Updated isAdmin for ${decoded.username} in database.`);
       }
