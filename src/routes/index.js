@@ -307,7 +307,10 @@ function loginViaHeaders(req, res, next) {
       isAdmin: remoteGroups.includes('admins'), // Check if user belongs to admin group
       validated: true,
     };
-    return next(); // Proceed to the next middleware/route handler
+
+    // Redirect to the original page or home after login via headers
+    const redirectTo = req.query.direct || '/';
+    return res.redirect(redirectTo);
   }
 
   // If headers don't exist, proceed to show the login form
@@ -340,7 +343,10 @@ router.post("/login", async (req, res) => {
     // Password matches, proceed with login
     const token = jwt.sign({ username, id: user.id }, JWT_KEY, { expiresIn: "5d" });
     res.cookie("auth_token", token, { httpOnly: true, maxAge: 5 * 24 * 60 * 60 * 1000 });
-    return res.redirect('/'); // Redirect after successful login
+
+    // Redirect to the direct query page or home page
+    const redirectTo = req.query.direct || '/';  // Use `direct` query or `/` if not set
+    return res.redirect(redirectTo);
   } else {
     // Invalid credentials, show error message
     res.render("login", { message: "Invalid credentials, try again." });
