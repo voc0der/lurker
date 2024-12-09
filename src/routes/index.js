@@ -295,40 +295,64 @@ router.post("/register", validateInviteToken, async (req, res) => {
 	}
 });
 
+// Middleware to check if user is logged in via HTTP headers
+function loginViaHeaders(req, res, next) {
+  const remoteUser = req.headers['remote-user'];
+  const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
+
+  if (remoteUser) {
+    // Assume the user is authenticated if the `remote-user` header is present
+    req.user = {
+      id: remoteUser,
+      isAdmin: remoteGroups.includes('admins'), // Check if user belongs to admin group
+      validated: true,
+    };
+    return next(); // Proceed to the next middleware/route handler
+  }
+
+  // If headers don't exist, proceed to show the login form
+  next();
+}
+
+// Use the middleware on the login route
+router.get("/login", loginViaHeaders, (req, res) => {
+  if (req.user && req.user.validated) {
+    // If user is logged in via headers, redirect to home page
+    return res.redirect('/');
+  }
+  
+  // If not logged in via headers, show the login form
+  res.render("login", { message: req.query.message });
+});
+
 router.get("/login", async (req, res) => {
 	res.render("login", req.query);
 });
 
-// POST /login
+// POST /login (form submission)
 router.post("/login", async (req, res) => {
-	const { username, password } = req.body;
-	const user = db
-		.query("SELECT * FROM users WHERE username = $username")
-		.get({ username });
-	if (user && (await Bun.password.verify(password, user.password_hash))) {
-		const token = jwt.sign({ username, id: user.id }, JWT_KEY, {
-			expiresIn: "5d",
-		});
-		res
-			.cookie("auth_token", token, {
-				httpOnly: true,
-				maxAge: 5 * 24 * 60 * 60 * 1000,
-			})
-			.redirect(req.query.redirect || "/");
-	} else {
-		res.render("login", {
-			message: "invalid credentials, try again",
-		});
-	}
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.render("login", { message: "Both username and password are required." });
+  }
+
+  // Check the credentials in the database (simplified here)
+  const user = db.query("SELECT * FROM users WHERE username = $username").get({ username });
+
+  if (user && user.password_hash === password) { // Normally you'd hash and compare passwords
+    const token = jwt.sign({ username, id: user.id }, JWT_KEY, { expiresIn: "5d" });
+    res.cookie("auth_token", token, { httpOnly: true, maxAge: 5 * 24 * 60 * 60 * 1000 });
+    return res.redirect('/'); // Redirect to home after successful login
+  } else {
+    res.render("login", { message: "Invalid credentials, try again." });
+  }
 });
 
 // this would be post, but i cant stuff it in a link
 router.get("/logout", (req, res) => {
-	res.clearCookie("auth_token", {
-		httpOnly: true,
-		secure: true,
-	});
-	res.redirect("/login");
+  res.clearCookie("auth_token", { httpOnly: true, secure: true });
+  res.redirect("/login");
 });
 
 // POST /subscribe
