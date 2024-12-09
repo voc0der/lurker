@@ -16,13 +16,16 @@ jobs:
       - name: install nix
         uses: cachix/install-nix-action@v27
 
-      - name: install dependencies (bun)
+      - name: install bun
         run: |
           curl -fsSL https://bun.sh/install | bash
-          export PATH=$HOME/.bun/bin:$PATH
+          export PATH="$HOME/.bun/bin:$PATH"
+          # Add bun to the PATH permanently for subsequent steps
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
       - name: run bun install
-        run: bun install --no-progress --frozen-lockfile
+        run: |
+          bun install --no-progress --frozen-lockfile
 
       - name: fetch current hash of node_modules
         run: |
