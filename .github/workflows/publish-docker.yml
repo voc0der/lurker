@@ -16,6 +16,22 @@ jobs:
       - name: install nix
         uses: cachix/install-nix-action@v27
 
+      - name: install dependencies (bun)
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          export PATH=$HOME/.bun/bin:$PATH
+
+      - name: run bun install
+        run: bun install --no-progress --frozen-lockfile
+
+      - name: fetch current hash of node_modules
+        run: |
+          # Calculate the hash of node_modules after running bun install
+          HASH=$(sha256sum ./node_modules/* | sha256sum | awk '{print $1}')
+          echo "Calculated node_modules hash: $HASH"
+          # Update the outputHash in flake.nix with the new hash
+          sed -i "s|outputHash = .*|outputHash = \"sha256-$HASH\"|" flake.nix
+
       - name: build docker image
         run: nix build -L .#dockerImage
 
