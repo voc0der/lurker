@@ -45,7 +45,7 @@ async function loginViaHeaders(req, res, next) {
     isAdmin: remoteGroups.includes('admins'),  // Check if user is an admin
     validated: true,  // Flag to mark user as validated via headers
   };
-  console.log('~debug marker~);
+  console.log('~debug marker~');
   console.log(req.user);
 
   // Check if the user already exists in the database
