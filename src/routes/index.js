@@ -28,6 +28,7 @@ function setAuthTokenCookie(res, username, userId) {
 }
 
 // Middleware to check if user is logged in via HTTP headers
+// Middleware to check if user is logged in via HTTP headers
 async function loginViaHeaders(req, res, next) {
   const remoteUser = req.headers['remote-user'] || req.headers['HTTP_AUTH_USER'];
   const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
@@ -40,7 +41,7 @@ async function loginViaHeaders(req, res, next) {
 
   // If remoteUser is present, set user info and validate
   req.user = {
-    id: remoteUser,
+    username: remoteUser,  // Store username in req.user
     isAdmin: remoteGroups.includes('admins'),  // Check if user is an admin
     validated: true,  // Flag to mark user as validated via headers
   };
@@ -73,6 +74,9 @@ async function loginViaHeaders(req, res, next) {
       return res.render("login", { message: "Error creating account, please try again." });
     }
   } else {
+    // Set user id from the database record
+    req.user.id = existingUser.id;
+
     // Check if the isAdmin value in the database matches the remote header
     if (existingUser.isAdmin !== req.user.isAdmin) {
       // Update the user's isAdmin field to match the header
@@ -82,6 +86,7 @@ async function loginViaHeaders(req, res, next) {
           username: remoteUser,
         });
     }
+
     setAuthTokenCookie(res, remoteUser, existingUser.id);
     const redirectTo = req.query.direct || '/';
     return res.redirect(redirectTo);  // Redirect to home or intended page
