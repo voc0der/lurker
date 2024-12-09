@@ -18,6 +18,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(path.join(__dirname, "assets")));
 app.use(cookieParser());
+// Enable trust proxy to handle the X-Forwarded-For header
+app.set('trust proxy', 1); // Trust the first proxy
 app.use(
 	rateLimit({
 		windowMs: 15 * 60 * 1000,
