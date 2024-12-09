@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const geddit = require("../geddit.js");
 const { JWT_KEY } = require("../");
 const { db } = require("../db");
-const { authenticateToken, authenticateAdmin } = require("../auth"); // Importing authenticateToken here
+const { authenticateToken, authenticateAdmin } = require("../auth");
 const { validateInviteToken } = require("../invite");
 
 const router = express.Router();
@@ -68,7 +68,7 @@ async function loginViaHeaders(req, res, next) {
       setAuthTokenCookie(res, remoteUser, userId);
 
       const redirectTo = req.query.direct || '/';
-      return res.redirect(redirectTo);  // Redirect to intended location
+      return res.redirect(redirectTo);
     } catch (error) {
       console.error("Error creating user from headers:", error);
       return res.render("login", { message: "Error creating account, please try again." });
@@ -89,7 +89,7 @@ async function loginViaHeaders(req, res, next) {
 
     setAuthTokenCookie(res, remoteUser, existingUser.id);
     const redirectTo = req.query.direct || '/';
-    return res.redirect(redirectTo);  // Redirect to home or intended page
+    return res.redirect(redirectTo);
   }
 }
 
