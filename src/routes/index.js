@@ -364,12 +364,15 @@ router.post("/register", validateInviteToken, async (req, res) => {
 	}
 });
 
-// GET /login (use loginViaHeaders for login via HTTP headers)
-router.get("/login", loginViaHeaders, (req, res) => {
-  // This will be reached only if the user wasn't automatically redirected by `loginViaHeaders`.
-  // If the user is logged in via HTTP headers or already has an account, they will be redirected before this.
-  
-  // If no header-based login took place, show the regular login page
+// GET /login
+router.get("/login", async (req, res, next) => {
+  const token = req.cookies.auth_token;
+  if (token) {
+    return res.redirect("/");
+  }
+  if (!req.headers['remote-user']) {
+    return loginViaHeaders(req, res, next);
+  }
   res.render("login", { message: req.query.message });
 });
 
