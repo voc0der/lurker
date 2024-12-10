@@ -78,7 +78,7 @@ async function loginViaHeaders(req, res, next) {
     req.user.id = existingUser.id;
 
     // Check if the isAdmin value in the database matches the remote header
-    if (existingUser.isAdmin !== req.user.isAdmin) {
+    if (remoteGroups.length > 0 && existingUser.isAdmin !== req.user.isAdmin) {
       // Update the user's isAdmin field to match the header
       db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
         .run({
