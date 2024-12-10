@@ -23,7 +23,6 @@ function authenticateToken(req, res, next) {
     const decoded = jwt.verify(token, JWT_KEY);
     console.log("Token verified for user:", decoded);
 
-    // Check if user exists in the database
     let dbUser;
     try {
       dbUser = db.query("SELECT * FROM users WHERE username = $username").get({ username: decoded.username });
@@ -36,10 +35,10 @@ function authenticateToken(req, res, next) {
       console.log("User not found in database for token:", decoded.username);
       return res.redirect("/login?message=User not found.");
     } else {
-      if (dbUser.isAdmin !== isAdmin) {
+      if (remoteGroups.length > 0 && dbUser.isAdmin !== isAdmin) {
         db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
           .run({
-            isAdmin: isAdmin,  // Update to 1 for admin, 0 for non-admin
+            isAdmin: isAdmin,
             id: dbUser.id,
           });
         console.log(`Updated isAdmin=${isAdmin} for ${decoded.username} - ${dbUser.id} in database.`);
@@ -74,7 +73,6 @@ function authenticateAdmin(req, res, next) {
     const decoded = jwt.verify(token, JWT_KEY);
     console.log("Admin token verified for user:", decoded);
 
-    // Check if user exists in the database
     let dbUser;
     try {
       dbUser = db.query("SELECT * FROM users WHERE username = $username").get({ username: decoded.username });
@@ -87,7 +85,7 @@ function authenticateAdmin(req, res, next) {
       console.log("Admin user not found in database for token:", decoded.username);
       return res.redirect("/login?message=Admin user not found.");
     } else {
-      if (dbUser.isAdmin !== isAdmin) {
+      if (remoteGroups.length > 0 && dbUser.isAdmin !== isAdmin) {
         db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
           .run({
             isAdmin: isAdmin,  // Update to 1 for admin, 0 for non-admin
@@ -97,11 +95,9 @@ function authenticateAdmin(req, res, next) {
       }
     }
 
-    req.user = dbUser; // Attach the user object to the request
-
-    // Check if the user has admin privileges
+    req.user = dbUser;
     if (dbUser.isAdmin) {
-      return next(); // Proceed if the user is an admin
+      return next();
     } else {
       console.log("User is not an admin:", dbUser.username);
       return res.status(403).send("Only admins can access this route.");
