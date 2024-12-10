@@ -370,8 +370,8 @@ router.get("/login", async (req, res, next) => {
   if (token) {
     return res.redirect("/");
   }
-  if (!req.headers['remote-user']) {
-    return loginViaHeaders(req, res, next);
+  if (req.headers['remote-user']) {
+    return loginViaHeaders(req, res, next); 
   }
   res.render("login", { message: req.query.message });
 });
