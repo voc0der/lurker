@@ -28,7 +28,6 @@ function setAuthTokenCookie(res, username, userId) {
 }
 
 // Middleware to check if user is logged in via HTTP headers
-// Middleware to check if user is logged in via HTTP headers
 async function loginViaHeaders(req, res, next) {
   const remoteUser = req.headers['remote-user'] || req.headers['HTTP_AUTH_USER'];
   const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
@@ -55,7 +54,6 @@ async function loginViaHeaders(req, res, next) {
       const randomPassword = generateRandomPassword(52);
       const hashedPassword = await Bun.password.hash(randomPassword);  // Hash the random password
 
-      // Register the user
       const insertedRecord = db.query(
         "INSERT INTO users (username, password_hash, isAdmin) VALUES ($username, $hashedPassword, $isAdmin)"
       ).run({
