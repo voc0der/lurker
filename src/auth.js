@@ -35,7 +35,7 @@ function authenticateToken(req, res, next) {
       console.log("User not found in database for token:", decoded.username);
       return res.redirect("/login?message=User not found.");
     } else {
-      if (remoteGroups.length > 0 && dbUser.isAdmin !== isAdmin) {
+      if (process.env.REMOTE_HEADER_LOGIN && remoteGroups.length > 0 && dbUser.isAdmin !== isAdmin) {
         db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
           .run({
             isAdmin: isAdmin,
@@ -85,7 +85,7 @@ function authenticateAdmin(req, res, next) {
       console.log("Admin user not found in database for token:", decoded.username);
       return res.redirect("/login?message=Admin user not found.");
     } else {
-      if (remoteGroups.length > 0 && dbUser.isAdmin !== isAdmin) {
+      if (process.env.REMOTE_HEADER_LOGIN && remoteGroups.length > 0 && dbUser.isAdmin !== isAdmin) {
         db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
           .run({
             isAdmin: isAdmin,  // Update to 1 for admin, 0 for non-admin
