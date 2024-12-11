@@ -7,7 +7,6 @@ const { JWT_KEY } = require("../");
 const { db } = require("../db");
 const { authenticateToken, authenticateAdmin } = require("../auth");
 const { validateInviteToken } = require("../invite");
-const 
 
 const router = express.Router();
 const G = new geddit.Geddit();
