@@ -35,7 +35,7 @@ async function loginViaHeaders(req, res, next) {
 
   // We need env.REMOTE_HEADER_LOGIN=true to use SSO. Also check if remoteUser header is missing
   if (!process.env.REMOTE_HEADER_LOGIN || !remoteUser) {
-    console.log("Remote user header missing");
+    if(process.env.REMOTE_HEADER_LOGIN) console.log("Remote user header missing");
     return res.redirect("/login");  // Redirect to login page if missing
   }
 
