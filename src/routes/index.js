@@ -34,7 +34,7 @@ async function loginViaHeaders(req, res, next) {
   const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
 
   // We need env.REMOTE_HEADER_LOGIN=true to use SSO. Also check if remoteUser header is missing
-  if (!process.env.REMOTE_HEADER_LOGIN || !remoteUser) {
+  if ((process.env.REMOTE_HEADER_LOGIN || false) || !remoteUser) {
     if(process.env.REMOTE_HEADER_LOGIN) console.log("Remote user header missing");
     return res.redirect("/login");  // Redirect to login page if missing
   }
