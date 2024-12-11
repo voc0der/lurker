@@ -7,6 +7,7 @@ const { JWT_KEY } = require("../");
 const { db } = require("../db");
 const { authenticateToken, authenticateAdmin } = require("../auth");
 const { validateInviteToken } = require("../invite");
+const 
 
 const router = express.Router();
 const G = new geddit.Geddit();
@@ -32,8 +33,8 @@ async function loginViaHeaders(req, res, next) {
   const remoteUser = req.headers['remote-user'] || req.headers['HTTP_AUTH_USER'];
   const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
 
-  // Check if remoteUser header is missing
-  if (!remoteUser) {
+  // We need env.REMOTE_HEADER_LOGIN=true to use SSO. Also check if remoteUser header is missing
+  if (!process.env.REMOTE_HEADER_LOGIN || !remoteUser) {
     console.log("Remote user header missing");
     return res.redirect("/login");  // Redirect to login page if missing
   }
