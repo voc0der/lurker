@@ -41,7 +41,7 @@
             cp -R ./node_modules/* $out/node_modules
             ls -la $out/node_modules
           '';
-          outputHash = "sha256-JkbS0DBwCJJbbaoHpkwxxumuVgl7ohu5BrAPIEV4iIg=";
+          outputHash = "sha256-bkGH4UJjk1m3wDyF1jB5FklIPGefIRTzmwzpg55o9JA=";
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
         };
