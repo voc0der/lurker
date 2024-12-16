@@ -97,8 +97,11 @@ router.get(
 // GET /subs
 router.get("/subs", authenticateToken, async (req, res) => {
 	const subs = db
-		.query("SELECT * FROM subscriptions WHERE user_id = $id")
+		.query(
+			"SELECT * FROM subscriptions WHERE user_id = $id ORDER by LOWER(subreddit)",
+		)
 		.all({ id: req.user.id });
+
 	res.render("subs", { subs, user: req.user });
 });
 
