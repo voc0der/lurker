@@ -22,12 +22,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(path.join(__dirname, "assets")));
 app.use(cookieParser());
-// Enable trust proxy to handle the X-Forwarded-For header
-app.set('trust proxy', 1); // Trust the first proxy
+if ((process.env.REMOTE_HEADER_LOGIN || false)) app.set('trust proxy', 1);
 app.use(
 	rateLimit({
 		windowMs: 15 * 60 * 1000,
-		max: 1000000,
+		max: (process.env.RATE_LIMIT || 100),
 		message: "Too many requests from this IP, please try again later.",
 		standardHeaders: true,
 		legacyHeaders: false,
