@@ -11,7 +11,6 @@ html
       div.hero
         h1 subscriptions
         p
-          - subs.sort((a, b) => a.subreddit.toLowerCase().localeCompare(b.subreddit.toLowerCase()))
           each s in subs 
             - var subreddit = s.subreddit
             - var isSubbed = subs.some(sub => sub.subreddit === subreddit)
