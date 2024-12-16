@@ -22,7 +22,7 @@ html
       +header(user)
       div.hero
         h3.sub-title
-          a(href=`/r/${post.subreddit}`) ← r/#{post.subreddit}
+          a(href=`/r/${post.subreddit}`) r/#{post.subreddit}
 
         div.info-container 
           - var domain = (new URL(post.url)).hostname
