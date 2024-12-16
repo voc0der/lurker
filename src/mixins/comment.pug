@@ -14,7 +14,7 @@ mixin infoContainer(data, next_id, prev_id)
       span(class=`${data.is_submitter ? 'op' : ''}`)
         | u/#{data.author} #{data.is_submitter ? '(op)' : ''}
       | &nbsp;·&nbsp;
-      if data.collapsed_reason_code == "DELETED"
+      if data.collapsed_reason_code == "DELETED" || data.author == "[deleted]"
         a(href=`https://undelete.pullpush.io${data.permalink}`) search on undelete
         | &nbsp;·&nbsp;
       | #{timeDifference(Date.now(), data.created * 1000)}
