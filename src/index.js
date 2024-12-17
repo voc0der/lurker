@@ -28,7 +28,12 @@ if ((process.env.REMOTE_HEADER_LOGIN || false)) {
 	if (trustedProxyIPs.length > 0) {
 		app.use((req, res, next) => {
 		    const clientIp = req.socket.remoteAddress || req.connection.remoteAddress;
+		    if (!clientIp) {
+		        console.error('Client IP is undefined.');
+		        return res.status(500).send('Server error: unable to determine client IP.');
+		    }
 		    const normalizedClientIp = clientIp.startsWith('::ffff:') ? clientIp.slice(7) : clientIp; // Normalize IPv6-mapped IPv4
+
 		    if (trustedProxyIPs.includes(normalizedClientIp)) {
 		        return next();
 		    }
