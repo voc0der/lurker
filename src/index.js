@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const app = express();
 const hasher = new Bun.CryptoHasher("sha256", "secret-key");
 const JWT_KEY = process.env.JWT_SECRET_KEY || hasher.update(Math.random().toString()).digest("hex");
+const trustedProxyIPs = (process.env.REVERSE_PROXY_WHITELIST || '').split(',').map(ip => ip.trim());
 
 // Log to verify the JWT_SECRET_KEY is loaded
 console.log("JWT_SECRET_KEY:", process.env.JWT_SECRET_KEY);
@@ -22,7 +23,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(path.join(__dirname, "assets")));
 app.use(cookieParser());
-if ((process.env.REMOTE_HEADER_LOGIN || false)) app.set('trust proxy', 1);
+if ((process.env.REMOTE_HEADER_LOGIN || false)) {
+	app.set('trust proxy', 1);
+	if (trustedProxyIPs.length > 0) {
+		app.use((req, res, next) => {
+		    const clientIp = req.socket.remoteAddress || req.connection.remoteAddress;
+		    const normalizedClientIp = clientIp.startsWith('::ffff:') ? clientIp.slice(7) : clientIp; // Normalize IPv6-mapped IPv4
+		    if (trustedProxyIPs.includes(normalizedClientIp)) {
+		        return next();
+		    }
+		    res.status(403).send('Access denied: unauthorized reverse proxy.');
+		});
+	}
+}
 app.use(
 	rateLimit({
 		windowMs: 15 * 60 * 1000,
