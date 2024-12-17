@@ -32,19 +32,6 @@ if ((process.env.REMOTE_HEADER_LOGIN || false)) {
         console.warn('No valid IPs in REVERSE_PROXY_WHITELIST. Falling back to trust proxy: 1.');
         app.set('trust proxy', 1);
     }
-    app.use((req, res, next) => {
-        const clientIp = req.socket?.remoteAddress || req.connection?.remoteAddress;
-        if (!clientIp) {
-            console.error('Client IP is undefined.');
-            return res.status(500).send('Server error: unable to determine client IP.');
-        }
-        const normalizedClientIp = clientIp.startsWith('::ffff:') ? clientIp.slice(7) : clientIp; // Normalize IPv6-mapped IPv4
-
-        if (trustedProxyIPs.includes(normalizedClientIp)) {
-            return next();
-        }
-        res.status(403).send('Access denied: unauthorized reverse proxy.');
-    });
 }
 app.use(
     rateLimit({
