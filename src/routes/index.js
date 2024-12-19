@@ -159,6 +159,7 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 			message,
 			user: req.user,
 			original_query: req.query.q,
+			currentUrl: req.url,
 		});
 	}
 });

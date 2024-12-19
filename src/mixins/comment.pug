@@ -19,6 +19,9 @@ mixin infoContainer(data, next_id, prev_id)
         | &nbsp;·&nbsp;
       | #{timeDifference(Date.now(), data.created * 1000)}
       | &nbsp;·&nbsp;
+      if data.edited !== false
+        | edited #{timeDifference(Date.now(), data.edited * 1000)} ago
+        | &nbsp;·&nbsp;
       a(href=`https://reddit.com${data.permalink}` title="view on reddit").nav-link open ↗
 
 -

@@ -3,7 +3,7 @@ include postUtils
 mixin post(p, currentUrl)
   - var from = encodeURIComponent(currentUrl)
   article.post
-    div(id=`${p.id}`).post-container
+    div.post-container
       div.post-text
         div.title-container
           a(href=`/comments/${p.id}?from=${from}`)
