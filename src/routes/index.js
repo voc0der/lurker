@@ -6,6 +6,7 @@ const { JWT_KEY } = require("../");
 const { db } = require("../db");
 const { authenticateToken, authenticateAdmin } = require("../auth");
 const { validateInviteToken } = require("../invite");
+const url = require("url");
 
 const router = express.Router();
 const G = new geddit.Geddit();
@@ -54,6 +55,7 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
 		isMulti,
 		user: req.user,
 		isSubbed,
+		currentUrl: req.url,
 	});
 });
 
@@ -65,10 +67,10 @@ router.get("/comments/:id", authenticateToken, async (req, res) => {
 		limit: 50,
 	};
 	response = await G.getSubmissionComments(id, params);
-
 	res.render("comments", {
 		data: unescape_submission(response),
 		user: req.user,
+		from: req.query.from,
 	});
 });
 
