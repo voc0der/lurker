@@ -20,4 +20,4 @@ html
             i #{message}
       if items
         each item in items
-          +post(item.data)
+          +post(item.data, currentUrl)

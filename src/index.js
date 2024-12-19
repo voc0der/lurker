@@ -1,7 +1,6 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const path = require("node:path");
-const geddit = require("./geddit.js");
 const cookieParser = require("cookie-parser");
 const app = express();
 const hasher = new Bun.CryptoHasher("sha256", "secret-key");

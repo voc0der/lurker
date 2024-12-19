@@ -1,11 +1,12 @@
 include ../utils
 include postUtils
-mixin post(p)
+mixin post(p, currentUrl)
+  - var from = encodeURIComponent(currentUrl)
   article.post
     div.post-container
       div.post-text
         div.title-container
-          a(href=`/comments/${p.id}`)
+          a(href=`/comments/${p.id}?from=${from}`)
             != p.title
           span.domain   (#{p.domain})
         div.info-container 
@@ -19,7 +20,7 @@ mixin post(p)
             | &nbsp;·&nbsp;
             a(href=`/r/${p.subreddit}`) r/#{p.subreddit}
             | &nbsp;·&nbsp;
-            a(href=`/comments/${p.id}`) #{fmtnum (p.num_comments)} ↩
+            a(href=`/comments/${p.id}?from=${from}`) #{fmtnum (p.num_comments)} ↩
       div.media-preview
         if isPostGallery(p)
           - var item = postGalleryItems(p)[0]

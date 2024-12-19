@@ -30,20 +30,29 @@ html
         details
           summary.sorting sorting by #{query.sort + (query.t?' '+query.t:'')}
           div.sort-opts
-            a(href=`/r/${subreddit}?sort=hot`) hot
-            a(href=`/r/${subreddit}?sort=new`) new
-            a(href=`/r/${subreddit}?sort=rising`) rising
-            a(href=`/r/${subreddit}?sort=top`) top
-            a(href=`/r/${subreddit}?sort=top&t=day`) top day
-            a(href=`/r/${subreddit}?sort=top&t=week`) top week
-            a(href=`/r/${subreddit}?sort=top&t=month`) top month
-            a(href=`/r/${subreddit}?sort=top&t=year`) top year
-            a(href=`/r/${subreddit}?sort=top&t=all`) top all
+            div
+              a(href=`/r/${subreddit}?sort=hot`) hot
+            div
+              a(href=`/r/${subreddit}?sort=new`) new
+            div
+              a(href=`/r/${subreddit}?sort=rising`) rising
+            div
+              a(href=`/r/${subreddit}?sort=top`) top
+            div
+              a(href=`/r/${subreddit}?sort=top&t=day`) top day
+            div
+              a(href=`/r/${subreddit}?sort=top&t=week`) top week
+            div
+              a(href=`/r/${subreddit}?sort=top&t=month`) top month
+            div
+              a(href=`/r/${subreddit}?sort=top&t=year`) top year
+            div
+              a(href=`/r/${subreddit}?sort=top&t=all`) top all
 
       if posts
         each child in posts.posts
-          +post(child.data)
-        
+          +post(child.data, currentUrl)
+
         if posts.after
           div.footer
             div.footer-item

@@ -22,6 +22,11 @@ html
       +header(user)
       div.hero
         h3.sub-title
+          if from
+            a(href=`${from}#${post.id}`) <- back
+            | &nbsp;&nbsp;
+            | ·
+            | &nbsp;&nbsp;
           a(href=`/r/${post.subreddit}`) r/#{post.subreddit}
 
         div.info-container 
