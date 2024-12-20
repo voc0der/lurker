@@ -2,6 +2,8 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const cookieParser = require("cookie-parser");
+const https = require("https");
+const fs = require("fs");
 const app = express();
 const hasher = new Bun.CryptoHasher("sha256", "secret-key");
 const JWT_KEY = process.env.JWT_SECRET_KEY || hasher.update(Math.random().toString()).digest("hex");
@@ -43,7 +45,32 @@ app.use(
 );
 app.use("/", routes);
 
-const port = process.env.LURKER_PORT;
-const server = app.listen(port ? port : 3000, () => {
-    console.log(`started on ${server.address().port}`);
-});
+const sslCertPath = process.env.LURKER_SSL_CERT_PATH;
+const sslKeyPath = process.env.LURKER_SSL_KEY_PATH;
+
+if (sslCertPath && sslKeyPath) {
+    try {
+        const sslCert = fs.readFileSync(sslCertPath, "utf8");
+        const sslKey = fs.readFileSync(sslKeyPath, "utf8");
+
+        // Create HTTPS server
+        const httpsServer = https.createServer({ 
+            key: sslKey,
+            cert: sslCert
+        }, app);
+
+        const port = process.env.LURKER_PORT || 3000;
+        httpsServer.listen(port, () => {
+            console.log(`HTTPS server started on port ${port}`);
+        });
+    } catch (err) {
+        console.error("Failed to load SSL certificate or key:", err.message);
+        process.exit(1); // Exit if the SSL setup fails
+    }
+} else {
+    console.warn("SSL_CERT_PATH or SSL_KEY_PATH not provided. Falling back to HTTP.");
+    const port = process.env.LURKER_PORT || 3000;
+    const server = app.listen(port, () => {
+        console.log(`HTTP server started on port ${server.address().port}`);
+    });
+}
