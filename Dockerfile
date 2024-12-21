@@ -1,3 +1,5 @@
 FROM oven/bun:latest
 ADD ./ ./
-CMD ["bun", "run", "src/index.js"]
+RUN mkdir -p /data
+WORKDIR /data
+CMD ["bun", "run", "/home/bun/app/src/index.js"]
