@@ -241,13 +241,8 @@ class Geddit {
 		options.q = query;
 		options.type = "link";
 
-		const params = {
-			limit: 25,
-			include_over_18: true,
-		};
-
 		return await fetch(
-			`${this.host}/search.json?${new URLSearchParams(Object.assign(params, options))}`,
+			`${this.host}/search.json?${new URLSearchParams(options)}`,
 		)
 			.then((res) => res.json())
 			.then((json) => json.data)

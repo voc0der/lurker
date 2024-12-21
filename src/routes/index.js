@@ -120,16 +120,16 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
   const aboutReq = G.getSubreddit(subreddit);
   const [posts, about] = await Promise.all([postsReq, aboutReq]);
 
-  res.render("index", {
-    subreddit,
-    posts,
-    about,
-    query,
-    isMulti,
-    user: req.user,
-    isSubbed,
-    currentUrl: req.url,
-  });
+	res.render("index", {
+		subreddit,
+		posts,
+		about,
+		query,
+		isMulti,
+		user: req.user,
+		isSubbed,
+		currentUrl: req.url,
+	});
 });
 
 // GET /comments/:id
@@ -143,7 +143,7 @@ router.get("/comments/:id", authenticateToken, async (req, res) => {
 	res.render("comments", {
 		data: unescape_submission(response),
 		user: req.user,
-        from: req.query.from,
+		from: req.query.from,
 	});
 });
 
@@ -190,10 +190,7 @@ router.get("/sub-search", authenticateToken, async (req, res) => {
 	if (!req.query || !req.query.q) {
 		res.render("sub-search", { user: req.user });
 	} else {
-		const { q, options } = parseQuery(req.query.q);
-		const { items, after } = await G.searchSubreddits(q, {
-			include_over_18: (options.nsfw ?? "no") === "yes",
-		});
+		const { items, after } = await G.searchSubreddits(q);
 		const subs = db
 			.query("SELECT subreddit FROM subscriptions WHERE user_id = $id")
 			.all({ id: req.user.id })
@@ -218,10 +215,7 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 	if (!req.query || !req.query.q) {
 		res.render("post-search", { user: req.user });
 	} else {
-		const { q, options } = parseQuery(req.query.q);
-		const { items, after } = await G.searchSubmissions(q, {
-			include_over_18: (options.nsfw ?? "no") === "yes",
-		});
+		const { items, after } = await G.searchSubmissions(req.query.q);
 		const message =
 			items.length === 0
 				? "no results found"
@@ -232,25 +226,10 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 			message,
 			user: req.user,
 			original_query: req.query.q,
-            currentUrl: req.url,
+			currentUrl: req.url,
 		});
 	}
 });
-
-function parseQuery(q) {
-	return q.split(/\s+/).reduce(
-		(acc, word) => {
-			if (word.includes(":")) {
-				const [key, val] = word.split(":");
-				acc.options[key] = val;
-			} else {
-				acc.q += `${word} `;
-			}
-			return acc;
-		},
-		{ options: [], q: "" },
-	);
-}
 
 // GET /dashboard
 router.get("/dashboard", authenticateToken, async (req, res) => {
