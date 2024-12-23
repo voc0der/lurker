@@ -22,7 +22,7 @@ jobs:
           set -e
           nix build -L .#dockerImage || (echo "BUILD_FAILED" && exit 1)
 
-      - name: Detect Hash Mismatch and Update flake.nix
+      - name: Extract new hash from the error logs and update flake.nix
         if: failure()
         run: |
           # Capture build log
@@ -33,8 +33,8 @@ jobs:
           echo "Build log:"
           cat "$BUILD_LOG"
 
-          # Extract the new hash directly using `outputHash = sha256-...` as the starting point
-          NEW_HASH=$(grep -oP "outputHash = sha256-(.*?)" "$BUILD_LOG" | grep -oP "sha256-(.*?)" | head -n 1)
+          # Extract the new hash from the "got:" line in the log
+          NEW_HASH=$(grep -oP "got:\s+sha256-[a-zA-Z0-9+/=]+" "$BUILD_LOG" | awk '{print $2}' | head -n 1)
 
           if [ -z "$NEW_HASH" ]; then
             echo "Failed to retrieve new hash from logs."
@@ -45,12 +45,9 @@ jobs:
 
           # Update the outputHash in flake.nix
           sed -i "s/outputHash = \".*\";/outputHash = \"$NEW_HASH\";/" flake.nix
+          echo "Updated outputHash in flake.nix to $NEW_HASH"
 
-          # Verify the change
-          echo "Updated flake.nix:"
-          grep outputHash flake.nix
-
-          # Commit and push the updated flake.nix
+          # Commit the updated flake.nix
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add flake.nix
