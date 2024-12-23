@@ -19,31 +19,30 @@ jobs:
       - name: Attempt to Build Docker Image
         id: build
         run: |
-          nix build -L .#dockerImage || echo "BUILD_FAILED" > build_status
+          set -e
+          nix build -L .#dockerImage || (echo "BUILD_FAILED" && exit 1)
 
-      - name: Update flake.nix if Build Fails
-        if: steps.build.outcome == 'failure'
+      - name: Detect Hash Mismatch and Update flake.nix
+        if: failure()
         run: |
-          if [ -f build_status ]; then
-            # Extract the new outputHash from the error message
-            NEW_HASH=$(nix build .#dockerImage 2>&1 | grep -oP 'got: \Ksha256-[a-zA-Z0-9+/=]+')
+          # Extract new hash from the error logs
+          NEW_HASH=$(nix build .#dockerImage 2>&1 | grep -oP 'got: \Ksha256-[a-zA-Z0-9+/=]+')
 
-            if [ -z "$NEW_HASH" ]; then
-              echo "Failed to retrieve new hash from logs."
-              exit 1
-            fi
-
-            # Update the outputHash in flake.nix
-            sed -i "s/outputHash = \".*\";/outputHash = \"$NEW_HASH\";/" flake.nix
-            echo "Updated outputHash in flake.nix to $NEW_HASH"
-
-            # Commit the updated flake.nix
-            git config --global user.name "GitHub Actions"
-            git config --global user.email "actions@github.com"
-            git add flake.nix
-            git commit -m "Update outputHash in flake.nix"
-            git push
+          if [ -z "$NEW_HASH" ]; then
+            echo "Failed to retrieve new hash from logs."
+            exit 1
           fi
+
+          # Update flake.nix with the new outputHash
+          sed -i "s/outputHash = \".*\";/outputHash = \"$NEW_HASH\";/" flake.nix
+          echo "Updated outputHash in flake.nix to $NEW_HASH"
+
+          # Commit the updated flake.nix
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add flake.nix
+          git commit -m "Update outputHash in flake.nix"
+          git push
 
       - name: Retry Build
         if: steps.build.outcome == 'failure'
