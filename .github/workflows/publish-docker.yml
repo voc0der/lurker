@@ -43,9 +43,12 @@ jobs:
 
           echo "New hash extracted: $NEW_HASH"
 
-          # Update the outputHash in flake.nix
-          sed -i "s/outputHash = \".*\";/outputHash = \"$NEW_HASH\";/" flake.nix
-          echo "Updated outputHash in flake.nix to $NEW_HASH"
+          # Use an alternative delimiter to avoid conflicts
+          sed -i "s|outputHash = \".*\";|outputHash = \"$NEW_HASH\";|" flake.nix
+
+          # Verify the change
+          echo "Updated flake.nix:"
+          grep outputHash flake.nix
 
           # Commit the updated flake.nix
           git config --global user.name "GitHub Actions"
