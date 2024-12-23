@@ -58,14 +58,22 @@ jobs:
           git commit -m "Update outputHash in flake.nix"
           git push
 
+          # Create a marker to indicate flake was updated
+          echo "flake-updated" > $GITHUB_ENV
+
       - name: Retry Build
-        if: steps.update-flake.outcome == 'success'
+        if: always()
         id: retry-build
-        run: nix build -L .#dockerImage
+        run: |
+          if [ "$flake-updated" = "true" ]; then
+            echo "Retrying build after flake update..."
+            nix build -L .#dockerImage
+          else
+            echo "No flake update detected. Skipping retry."
+          fi
 
       - name: Log in to Docker Hub
-        if: steps.retry-build.outcome == 'success'
-        id: docker-login
+        if: steps.retry-build.outcome == 'success' || steps.build.outcome == 'success'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
