@@ -25,16 +25,16 @@ jobs:
       - name: Detect Hash Mismatch and Update flake.nix
         if: failure()
         run: |
-          # Extract new hash from the error logs
+          # Capture build log
           BUILD_LOG=$(mktemp)
           nix build .#dockerImage > "$BUILD_LOG" 2>&1 || true
 
-          # Display the build log for debugging
+          # Display build log for debugging
           echo "Build log:"
           cat "$BUILD_LOG"
 
-          # Try to extract the new hash
-          NEW_HASH=$(grep -oP 'got: \Ksha256-[a-zA-Z0-9+/=]+' "$BUILD_LOG")
+          # Extract the new hash directly using `outputHash = sha256-...` as the starting point
+          NEW_HASH=$(grep -oP "outputHash = sha256-(.*?)" "$BUILD_LOG" | grep -oP "sha256-(.*?)" | head -n 1)
 
           if [ -z "$NEW_HASH" ]; then
             echo "Failed to retrieve new hash from logs."
@@ -43,20 +43,19 @@ jobs:
 
           echo "New hash extracted: $NEW_HASH"
 
-          # Update flake.nix with the new outputHash
+          # Update the outputHash in flake.nix
           sed -i "s/outputHash = \".*\";/outputHash = \"$NEW_HASH\";/" flake.nix
 
           # Verify the change
           echo "Updated flake.nix:"
-          cat flake.nix | grep outputHash
+          grep outputHash flake.nix
 
-          # Commit the updated flake.nix
+          # Commit and push the updated flake.nix
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add flake.nix
           git commit -m "Update outputHash in flake.nix"
           git push
-
 
       - name: Retry Build
         if: steps.build.outcome == 'failure'
