@@ -20,64 +20,68 @@ jobs:
         id: build
         run: |
           set -e
-          nix build -L .#dockerImage || (echo "BUILD_FAILED" && exit 1)
+          nix build -L .#dockerImage || echo "BUILD_FAILED=true" >> $GITHUB_ENV
 
       - name: Extract new hash from the error logs and update flake.nix
-        if: failure()
-        id: update-flake
         run: |
-          # Capture build log
-          BUILD_LOG=$(mktemp)
-          nix build .#dockerImage > "$BUILD_LOG" 2>&1 || true
+          if [ "$BUILD_FAILED" == "true" ]; then
+            echo "Build failed. Attempting to extract new hash and update flake.nix..."
 
-          # Display build log for debugging
-          echo "Build log:"
-          cat "$BUILD_LOG"
+            # Capture build log
+            BUILD_LOG=$(mktemp)
+            nix build .#dockerImage > "$BUILD_LOG" 2>&1 || true
 
-          # Extract the new hash from the "got:" line in the log
-          NEW_HASH=$(grep -oP "got:\s+sha256-[a-zA-Z0-9+/=]+" "$BUILD_LOG" | awk '{print $2}' | head -n 1)
+            # Display build log for debugging
+            echo "Build log:"
+            cat "$BUILD_LOG"
 
-          if [ -z "$NEW_HASH" ]; then
-            echo "Failed to retrieve new hash from logs."
-            exit 1
+            # Extract the new hash from the "got:" line in the log
+            NEW_HASH=$(grep -oP "got:\s+sha256-[a-zA-Z0-9+/=]+" "$BUILD_LOG" | awk '{print $2}' | head -n 1)
+
+            if [ -z "$NEW_HASH" ]; then
+              echo "Failed to retrieve new hash from logs."
+              exit 1
+            fi
+
+            echo "New hash extracted: $NEW_HASH"
+
+            # Use an alternative delimiter to avoid conflicts
+            sed -i "s|outputHash = \".*\";|outputHash = \"$NEW_HASH\";|" flake.nix
+
+            # Verify the change
+            echo "Updated flake.nix:"
+            grep outputHash flake.nix
+
+            # Commit the updated flake.nix
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add flake.nix
+            git commit -m "Update outputHash in flake.nix"
+            git push
+
+            # Mark that the flake was updated
+            echo "FLAKE_UPDATED=true" >> $GITHUB_ENV
+          else
+            echo "Build succeeded. Skipping flake update."
           fi
 
-          echo "New hash extracted: $NEW_HASH"
-
-          # Use an alternative delimiter to avoid conflicts
-          sed -i "s|outputHash = \".*\";|outputHash = \"$NEW_HASH\";|" flake.nix
-
-          # Verify the change
-          echo "Updated flake.nix:"
-          grep outputHash flake.nix
-
-          # Commit the updated flake.nix
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add flake.nix
-          git commit -m "Update outputHash in flake.nix"
-          git push
-
-          # Mark that flake was updated
-          echo "FLAKE_UPDATED=true" >> $GITHUB_ENV
-
       - name: Retry Build
-        if: env.FLAKE_UPDATED == 'true'
-        id: retry-build
         run: |
-          echo "Retrying build after flake update..."
-          nix build -L .#dockerImage
+          if [ "$FLAKE_UPDATED" == "true" ]; then
+            echo "Retrying build after flake update..."
+            nix build -L .#dockerImage || exit 1
+          else
+            echo "No flake update detected. Skipping retry."
+          fi
 
       - name: Log in to Docker Hub
-        if: env.FLAKE_UPDATED == 'true'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo "Attempting to log in to Docker Hub..."
+          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Publish Docker Image
-        if: env.FLAKE_UPDATED == 'true'
         run: |
+          echo "Publishing Docker image..."
           docker load < result
           docker tag lurker:latest ${{ secrets.DOCKER_USERNAME }}/lurker:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/lurker:latest
