@@ -41,7 +41,7 @@
             cp -R ./node_modules/* $out/node_modules
             ls -la $out/node_modules
           '';
-          outputHash = "sha256-iv1DddCTB1yyu21Ev/c4xtLHSvDas9jQAO2Ob9Iah2Q=";
+          outputHash = "sha256-wCMsk/gR+U5fCHcRj7Mxvh9Lg6wZAtMn7CvjyCPar+g=";
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
         };
@@ -73,27 +73,6 @@
 
           '';
         };
-      dockerImage = with final;
-        final.dockerTools.buildImage {
-          name = pname;
-          tag = "latest";
-
-          copyToRoot = final.buildEnv {
-            name = "image-root";
-            paths = [final.lurker];
-            pathsToLink = ["/bin"];
-          };
-
-          runAsRoot = ''
-            mkdir -p /data
-          '';
-
-          config = {
-            Cmd = ["/bin/${pname}"];
-            WorkingDir = "/data";
-            Volumes = {"/data" = {};};
-          };
-        };
     };
 
     devShell = forAllSystems (system: let
@@ -108,7 +87,7 @@
       });
 
     packages = forAllSystems (system: {
-      inherit (nixpkgsFor."${system}") lurker node_modules dockerImage;
+      inherit (nixpkgsFor."${system}") lurker node_modules;
     });
 
     defaultPackage = forAllSystems (system: nixpkgsFor."${system}".lurker);

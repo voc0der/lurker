@@ -60,9 +60,6 @@ or with the docker image:
 # pull the latest image from gh container registry
 $ docker pull ghcr.io/oppiliappan/lurker:latest
 
-# the image will be marked as created on 1970, this is a
-# quirk of using nix, it should not affect usage
-$ docker image ls
 REPOSITORY                   TAG       IMAGE ID       CREATED        SIZE
 ghcr.io/oppiliappan/lurker   latest    ba3733164889   ???            227MB
 
