@@ -190,7 +190,7 @@ router.get("/sub-search", authenticateToken, async (req, res) => {
 	if (!req.query || !req.query.q) {
 		res.render("sub-search", { user: req.user });
 	} else {
-		const { items, after } = await G.searchSubreddits(q);
+		const { items, after } = await G.searchSubreddits(req.query.q);
 		const subs = db
 			.query("SELECT subreddit FROM subscriptions WHERE user_id = $id")
 			.all({ id: req.user.id })

@@ -8,9 +8,7 @@ const app = express();
 const hasher = new Bun.CryptoHasher("sha256", "secret-key");
 const JWT_KEY = process.env.JWT_SECRET_KEY || hasher.update(Math.random().toString()).digest("hex");
 const trustedProxyIPs = (process.env.REVERSE_PROXY_WHITELIST || '').split(',').map(ip => ip.trim());
-
-console.log("JWT_SECRET_KEY:", process.env.JWT_SECRET_KEY);
-console.log("Using JWT_KEY:", JWT_KEY);  // This is the key that will be used for signing and verifying the JWT
+const httpBinding = process.env.HTTP_BINDING || "127.0.0.1";
 
 module.exports = { JWT_KEY };
 
@@ -27,7 +25,6 @@ if ((process.env.REMOTE_HEADER_LOGIN || false)) {
     // Set trust proxy dynamically based on trustedProxyIPs, fallback to '1'
     if (trustedProxyIPs.some(ip => ip)) {
         const trustProxyRanges = trustedProxyIPs.join(",");
-        console.log("Trusting proxies in range:", trustProxyRanges);
         app.set('trust proxy', trustProxyRanges);
     } else {
         console.warn('No valid IPs in REVERSE_PROXY_WHITELIST. Falling back to trust proxy: 1.');
@@ -53,24 +50,23 @@ if (sslCertPath && sslKeyPath) {
         const sslCert = fs.readFileSync(sslCertPath, "utf8");
         const sslKey = fs.readFileSync(sslKeyPath, "utf8");
 
-        // Create HTTPS server
         const httpsServer = https.createServer({ 
             key: sslKey,
             cert: sslCert
         }, app);
 
         const port = process.env.LURKER_PORT || 3000;
-        httpsServer.listen(port, () => {
+        httpsServer.listen(port, httpBinding, () => {
             console.log(`HTTPS server started on port ${port}`);
         });
     } catch (err) {
         console.error("Failed to load SSL certificate or key:", err.message);
-        process.exit(1); // Exit if the SSL setup fails
+        process.exit(1);
     }
 } else {
     console.warn("SSL_CERT_PATH or SSL_KEY_PATH not provided. Falling back to HTTP.");
     const port = process.env.LURKER_PORT || 3000;
-    const server = app.listen(port, () => {
+    const server = app.listen(port, httpBinding, () => {
         console.log(`HTTP server started on port ${server.address().port}`);
     });
 }

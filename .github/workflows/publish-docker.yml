@@ -13,6 +13,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+<<<<<<< HEAD
       - name: Install Nix
         uses: cachix/install-nix-action@v27
 
@@ -85,3 +86,19 @@ jobs:
           docker load < result
           docker tag lurker:latest ${{ secrets.DOCKER_USERNAME }}/lurker:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/lurker:latest
+=======
+      - name: build docker image
+        run: docker build -t lurker:latest .
+
+      - name: log in to github container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: publish docker image
+        run: |
+          docker tag lurker:latest ghcr.io/${{ github.repository_owner }}/lurker:latest
+          docker push ghcr.io/${{ github.repository_owner }}/lurker:latest
+>>>>>>> upstream/master
