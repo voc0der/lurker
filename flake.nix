@@ -73,9 +73,7 @@
 
           '';
         };
-    };
-
-    dockerImage = with final;
+      dockerImage = with final;
         final.dockerTools.buildImage {
           name = pname;
           tag = "latest";
@@ -93,7 +91,7 @@
           config = {
             Cmd = ["/bin/${pname}"];
             WorkingDir = "/data";
-            Volumes = {"/data" = {};
+            Volumes = {"/data" = {};};
           };
         };
     };
