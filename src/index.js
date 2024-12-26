@@ -8,7 +8,7 @@ const app = express();
 const hasher = new Bun.CryptoHasher("sha256", "secret-key");
 const JWT_KEY = process.env.JWT_SECRET_KEY || hasher.update(Math.random().toString()).digest("hex");
 const trustedProxyIPs = (process.env.REVERSE_PROXY_WHITELIST || '').split(',').map(ip => ip.trim());
-const httpBinding = process.env.HTTP_BINDING || "127.0.0.1";
+const httpBinding = process.env.HTTP_BINDING || "0.0.0.0";
 
 module.exports = { JWT_KEY };
 
