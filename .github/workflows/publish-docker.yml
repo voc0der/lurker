@@ -20,7 +20,7 @@ jobs:
         id: build
         run: |
           set -e
-          nix build -L .#dockerImage || echo "BUILD_FAILED=true" >> $GITHUB_ENV
+          nix build -L . || echo "BUILD_FAILED=true" >> $GITHUB_ENV
 
       - name: Extract new hash from the error logs and update flake.nix
         run: |
