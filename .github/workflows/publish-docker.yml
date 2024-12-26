@@ -29,7 +29,7 @@ jobs:
 
             # Capture build log
             BUILD_LOG=$(mktemp)
-            nix build .#dockerImage > "$BUILD_LOG" 2>&1 || true
+            nix build . > "$BUILD_LOG" 2>&1 || true
 
             # Display build log for debugging
             echo "Build log:"
@@ -69,7 +69,7 @@ jobs:
         run: |
           if [ "$FLAKE_UPDATED" == "true" ]; then
             echo "Retrying build after flake update..."
-            nix build -L .#dockerImage || exit 1
+            nix build -L . || exit 1
           else
             echo "No flake update detected. Skipping retry."
           fi
