@@ -93,7 +93,7 @@
           config = {
             Cmd = ["/bin/${pname}"];
             WorkingDir = "/data";
-            Volumes = {"/data" = {};};
+            Volumes = {"/data" = {};
           };
         };
     };
