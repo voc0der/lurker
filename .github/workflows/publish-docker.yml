@@ -20,7 +20,7 @@ jobs:
         id: build
         run: |
           set -e
-          nix build -L .#dockerImage || echo "BUILD_FAILED=true" >> $GITHUB_ENV
+          docker build -t lurker:latest . || echo "BUILD_FAILED=true" >> $GITHUB_ENV
 
       - name: Extract new hash from the error logs and update flake.nix
         run: |
@@ -69,7 +69,7 @@ jobs:
         run: |
           if [ "$FLAKE_UPDATED" == "true" ]; then
             echo "Retrying build after flake update..."
-            nix build -L .#dockerImage || exit 1
+            docker build -t lurker:latest . || exit 1
           else
             echo "No flake update detected. Skipping retry."
           fi
@@ -82,6 +82,5 @@ jobs:
       - name: Publish Docker Image
         run: |
           echo "Publishing Docker image..."
-          docker load < result
           docker tag lurker:latest ${{ secrets.DOCKER_USERNAME }}/lurker:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/lurker:latest
