@@ -73,27 +73,6 @@
 
           '';
         };
-      dockerImage = with final;
-        final.dockerTools.buildImage {
-          name = pname;
-          tag = "latest";
-
-          copyToRoot = final.buildEnv {
-            name = "image-root";
-            paths = [final.lurker];
-            pathsToLink = ["/bin"];
-          };
-
-          runAsRoot = ''
-            mkdir -p /data
-          '';
-
-          config = {
-            Cmd = ["/bin/${pname}"];
-            WorkingDir = "/data";
-            Volumes = {"/data" = {};};
-          };
-        };
     };
 
     devShell = forAllSystems (system: let
@@ -108,7 +87,7 @@
       });
 
     packages = forAllSystems (system: {
-      inherit (nixpkgsFor."${system}") lurker node_modules dockerImage;
+      inherit (nixpkgsFor."${system}") lurker node_modules;
     });
 
     defaultPackage = forAllSystems (system: nixpkgsFor."${system}".lurker);
