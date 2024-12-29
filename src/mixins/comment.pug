@@ -1,6 +1,7 @@
 include ../utils
 
 mixin infoContainer(data, next_id, prev_id)
+  - var hats = (data.is_submitter?['op']:[]).concat(data.distinguished=="moderator"?['mod']:[])
   div.comment-info-container
     p
       | #{fmtnum(data.ups)} ↑
@@ -12,7 +13,7 @@ mixin infoContainer(data, next_id, prev_id)
         a(href=`#${prev_id}` title="scroll to previous comment").nav-link prev
         | &nbsp;·&nbsp;
       span(class=`${data.is_submitter ? 'op' : ''}`)
-        | u/#{data.author} #{data.is_submitter ? '(op)' : ''}
+        | u/#{data.author} #{hats.length==0?'':`(${hats.join('|')})`}
       | &nbsp;·&nbsp;
       if data.collapsed_reason_code == "DELETED" || data.author == "[deleted]"
         a(href=`https://undelete.pullpush.io${data.permalink}`) search on undelete
@@ -21,6 +22,9 @@ mixin infoContainer(data, next_id, prev_id)
       | &nbsp;·&nbsp;
       if data.edited !== false
         | edited #{timeDifference(Date.now(), data.edited * 1000)} ago
+        | &nbsp;·&nbsp;
+      if data.stickied
+        | stickied
         | &nbsp;·&nbsp;
       a(href=`https://reddit.com${data.permalink}` title="view on reddit").nav-link open ↗
 
@@ -38,7 +42,7 @@ mixin comment(com, isfirst, parent_id, next_id, prev_id)
       a(href=`/comments/${parent_id}/comment/${data.id}`)
         | #{data.count} more #{fmttxt(data.count, 'comment')}
   else
-    div(class=`comment ${isfirst ? 'first' : ''}`)
+    div(class=`comment ${isfirst ? 'first' : ''} ${data.stickied ? 'sticky' : ''}`)
       details(id=`${data.id}` open="")
         summary.expand-comments
           +infoContainer(data, next_id, prev_id)
