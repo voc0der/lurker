@@ -2,7 +2,7 @@ include ../utils
 include postUtils
 mixin post(p, currentUrl)
   - var from = encodeURIComponent(currentUrl)
-  article.post
+  article(class=`post ${p.stickied?"sticky":""}`)
     div.post-container
       div.post-text
         div.title-container
