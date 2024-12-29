@@ -5,6 +5,7 @@
   --text-color: black;
   --text-color-muted: #999;
   --blockquote-color: green;
+  --sticky-color: lightgreen;
   --link-color: #29BC9B;
   --link-visited-color: #999;
   --accent: var(--link-color);
@@ -22,6 +23,7 @@
     --text-color: white;
     --text-color-muted: #999;
     --blockquote-color: lightgreen;
+    --sticky-color: #034611;
     --link-color: #79ffe1;
     --link-visited-color: #999;
     --accent: var(--link-color);
@@ -119,6 +121,10 @@ a:visited {
 nav {
   display: flex;
   align-items: stretch;
+}
+
+.post {
+  margin-bottom: 5px;
 }
 
 .post, .comments-container, .hero, .header, .footer {
@@ -791,3 +797,10 @@ select {
   text-indent: 1px;
   text-overflow: '';
 }
+
+.sticky {
+  background-color: var(--sticky-color);
+  border-radius: 2px;
+  border: 4px solid var(--sticky-color);
+}
+
