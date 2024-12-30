@@ -2,6 +2,8 @@ include ../mixins/post
 include ../mixins/header
 include ../mixins/head
 
+- var viewQuery = query && query.view ? query.view : 'compact'
+- var sortQuery = query && query.sort ? query.sort + (query.t ? '&t=' + query.t : '') : 'hot'
 doctype html
 html
   +head("search posts")
@@ -14,6 +16,8 @@ html
         form(action="/post-search" method="get").search-bar
           - var prefill = original_query ?? "";
           input(type="text" name="q" placeholder="type in a search term..." value=prefill required).search-input
+          input(type="hidden" name="sort" value=sortQuery)
+          input(type="hidden" name="view" value=viewQuery)
           button(type="submit").search-button go
         if message
           div.search-message

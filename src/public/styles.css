@@ -43,6 +43,10 @@ body {
   color: var(--text-color);
 }
 
+body:has(details.card[open]) {
+  overflow: hidden;
+}
+
 main {
   display: flex;
   flex-direction: column;
@@ -127,6 +131,120 @@ nav {
   font-size: 0.9rem;
 }
 
+.post-container.card {
+  border: 1px solid var(--bg-color-muted);
+  border-radius: 16px;
+  display: block;
+}
+
+.post-text.card {
+  padding: 0.9rem;
+  padding-top: 0.3rem;
+}
+
+.self-text-overflow.card {
+  /* For spoiler positioning */
+  position: relative;
+  padding-top: 0.3rem;
+  max-height: 10vh;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  display: block;
+}
+
+.self-text.card {
+  overflow: hidden;
+  display: -webkit-box;
+  /* Safari on iOS <= 17 */
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  text-overflow: ellipsis;
+}
+
+.media-preview.card {
+  position: relative;
+  padding: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+
+.media-preview.card > img {
+  cursor: pointer;
+}
+
+.image-viewer.card {
+  /* Safari on iOS <= 17 */
+  -webkit-backdrop-filter: blur(2rem);
+  backdrop-filter: blur(2rem);
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.image-viewer.card > button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 1rem;
+  padding: initial;
+  height: 3rem;
+  width: 3rem;
+  font-size: 2rem;
+  border-radius: 100%;
+  cursor: pointer;
+}
+
+.image-viewer.card > a > img {
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+}
+
+.gallery.card {
+  align-items: center;
+}
+
+.gallery-item.card > a > img {
+  max-width: 95vw;
+  max-height: 95vh;
+  width: auto;
+  height: auto;
+}
+
+.spoiler {
+  background-color: rbga(var(--bg-color-muted), 0.2);
+  /* Safari on iOS <= 17 */
+  -webkit-backdrop-filter: blur(3rem);
+  backdrop-filter: blur(3rem);
+  border-radius: 4px;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  
+  box-sizing: border-box;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  
+  justify-content: center;
+  align-items: center;
+
+  cursor: pointer;
+}
+
+.gallery-item-idx.card,
+.spoiler > h2 {
+  text-shadow: 0.1rem 0.1rem 1rem var(--bg-color-muted);
+}
+
 .comments-container {
   font-size: 0.9rem;
 }
@@ -169,6 +287,29 @@ summary::before {
   object-fit: cover;
   width: 4rem;
   height: 4rem;
+}
+
+.media-preview.card img,
+.media-preview.card video {
+  border-radius: 16px;
+
+  max-height: 40vh;
+  max-width: 100%;
+
+  display: block;
+  width: initial;
+  height: initial;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1rem;
+
+  object-fit: fill;
+}
+
+.media-preview.card a {
+  font-size: 1.5rem;
+  margin: 1rem;
+  padding: initial;
 }
 
 .media-preview a {
@@ -225,6 +366,20 @@ form {
     width: 5rem;
     height: 5rem;
   }
+  .media-preview.card img,
+  .media-preview.card video
+  {
+    max-height: 50vh;
+  }
+  .media-preview.card a {
+    font-size: 1rem;
+    margin: 0.7rem;
+    padding: initial;
+  }
+  .self-text.card {
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+  }
   .post-author {
     display: inline
   }
@@ -252,9 +407,23 @@ form {
     width: 5rem;
     height: 5rem;
   }
+  .media-preview.card img,
+  .media-preview.card video
+  {
+    max-height: 30vh;
+  }
   .media-preview a {
     font-size: 2rem;
     padding: 2rem;
+  }
+  .media-preview.card a {
+    font-size: 1rem;
+    margin: 0.5rem;
+    padding: initial;
+  }
+  .self-text.card {
+    -webkit-line-clamp: 6;
+    line-clamp: 6;
   }
   .post-author {
     display: inline
@@ -276,6 +445,11 @@ form {
   .post, .comments-container, .hero, .header, .footer {
     flex: 1 1 40%;
     width: 40%;
+  }
+  .media-preview.card img,
+  .media-preview.card video
+  {
+    max-height: 20vh;
   }
   .sort-opts {
     grid-template-columns: repeat(9, 1fr);
@@ -343,6 +517,11 @@ form {
 .title-container > a {
   color: var(--text-color);
   text-decoration: none;
+}
+
+.title-container.card > a {
+  font-size: 1.125rem;
+  font-weight: bold;
 }
 
 .title-container > a:hover {
