@@ -14,6 +14,10 @@ mixin post(p, currentUrl)
         div.info-container 
           p
             | #{fmtnum(p.ups)} ↑ 
+            if p.gilded > 0
+              | &nbsp;·&nbsp;
+              span.gilded
+                | #{p.gilded} ☆
             span.post-author
               | &nbsp;·&nbsp;
               | u/#{p.author} 
