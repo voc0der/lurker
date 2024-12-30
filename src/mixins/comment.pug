@@ -12,6 +12,10 @@ mixin infoContainer(data, next_id, prev_id)
       if prev_id
         a(href=`#${prev_id}` title="scroll to previous comment").nav-link prev
         | &nbsp;·&nbsp;
+      if data.gilded > 0
+        span.gilded
+          | #{data.gilded} ☆
+        | &nbsp;·&nbsp;
       span(class=`${data.is_submitter ? 'op' : ''}`)
         | u/#{data.author} #{hats.length==0?'':`(${hats.join('|')})`}
       | &nbsp;·&nbsp;
