@@ -16,9 +16,9 @@ html
         div.sub-title
           h1 
             if isMulti
-              a(href=`/?${sortQuery}&${viewQuery}`) lurker
+              a(href=`/?sort=${sortQuery}&view=${viewQuery}`) lurker
             else
-              a(href=`/r/${subreddit}?${sortQuery}&${viewQuery}`)
+              a(href=`/r/${subreddit}?sort=${sortQuery}&view=${viewQuery}`)
                 | r/#{subreddit}
           if !isMulti
             div#button-container
