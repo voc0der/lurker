@@ -4,8 +4,8 @@ mixin post(p, currentUrl)
   - var from = encodeURIComponent(currentUrl)
   - var viewQuery = query && query.view ? query.view : 'compact'
   - var sortQuery = query && query.sort ? query.sort + (query.t ? '&t=' + query.t : '') : 'hot'
-  article(class=`post ${p.stickied?"sticky":""}`)
-    div.post-container(class=`${query.view}`)
+  article(class=`post`)
+    div.post-container(class=`${query.view} ${p.stickied?"sticky":""}`)
       div.post-text(class=`${query.view}`)
         div.title-container(class=`${query.view}`)
           a(class=`${query.view}`, href=`/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}`)
