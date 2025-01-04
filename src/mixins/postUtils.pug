@@ -53,8 +53,9 @@
   }
 -
   function convertInlineImageLinks(html) {
-    // Find all anchors that href to https://preview.redd.it
-    const expression = /<a href="https:\/\/preview\.redd\.it.*?">(.*?)<\/a>/g;
+    // Find all anchors that href to preview.redd.it, i.redd.it, i.imgur.com
+    // and contain just a link to the same href
+    const expression = /<a href="(http[s]?:\/\/(?:preview\.redd\.it|i\.redd\.it|i\.imgur\.com).*?)">\1?<\/a>/g;
     const matches = html.matchAll(expression);
     var result = html;
     matches.forEach((match) => {
