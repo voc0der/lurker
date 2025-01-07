@@ -60,7 +60,7 @@
     var result = html;
     matches.forEach((match) => {
       // Replace each occurrence with an actual img tag
-      result = result.replace(match[0], '<a href="' + match[1] + '"><img src="' + match[1] + '"></a>');
+      result = result.replace(match[0], '<a href="' + match[1] + '"><img class="inline" src="' + match[1] + '"></a>');
     })
 
     return result;

@@ -809,3 +809,7 @@ select {
   border-radius: 2px;
   border: 4px solid var(--sticky-color);
 }
+
+.inline {
+  max-width: 100%;
+}
