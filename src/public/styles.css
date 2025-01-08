@@ -141,7 +141,7 @@ nav {
 
 .post-container.card {
   border: 1px solid var(--bg-color-muted);
-  border-radius: 16px;
+  border-radius: 8px;
   display: block;
 }
 
@@ -299,7 +299,7 @@ summary::before {
 
 .media-preview.card img,
 .media-preview.card video {
-  border-radius: 16px;
+  border-radius: 6px;
 
   max-height: 40vh;
   max-width: 100%;
