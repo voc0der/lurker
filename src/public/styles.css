@@ -288,27 +288,36 @@ summary::before {
   height: 4rem;
 }
 
+.media-preview.card {
+  padding: unset;
+}
+
 .media-preview.card img,
 .media-preview.card video {
   border-radius: 6px;
 
   max-height: 40vh;
-  max-width: 100%;
+  max-width: 95%;
 
   display: block;
-  width: initial;
-  height: initial;
+  width: unset;
+  height: unset;
   margin-left: auto;
   margin-right: auto;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 
   object-fit: fill;
 }
 
 .media-preview.card a {
   font-size: 1.5rem;
-  margin: 1rem;
-  padding: initial;
+  padding: unset;
+  padding-left: 1rem;
+}
+
+.media-preview.card a:has(img) {
+  font-size: 0rem;
+  padding: unset;
 }
 
 .media-preview a {
