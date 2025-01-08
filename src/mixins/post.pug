@@ -77,31 +77,28 @@ mixin post(p, currentUrl)
               | #{p.domain} 
             | ↗
 
-  if (isPostGallery(p) || isPostImage(p) || isPostVideo(p))
-    details(id=`${p.id}`,class=`${query.view}`)
-      summary.expand-post expand media
-      div.image-viewer(class=`${query.view}`)
-        if isPostGallery(p)
-          div.gallery(class=`${query.view}`)
-            each item in postGalleryItems(p)
-              div.gallery-item(class=`${query.view}`)
-                div.gallery-item-idx(class=`${query.view}`)
-                  | #{`${item.idx}/${item.total}`}
-                a(href=`/media/${item.url}`)
-                  img(src=item.url loading="lazy")
-        else if isPostImage(p)
-          a(href=`/media/${p.url}`)
-            img(src=p.url loading="lazy").post-media
-        else if isPostVideo(p)
-          video(controls="" muted="" data-dashjs-player="" preload="metadata" playsinline="" poster=decodedVideos[4] objectfit="contain" loading="lazy").post-media
-              //HLS
-              source(src=decodedVideos[0])
-              // Dash
-              source(src=decodedVideos[1])
-              // Fallback
-              source(src=decodedVideos[2])
-        button(onclick=`toggleDetails('${p.id}')`,class=`${query.view}`)
-          if (query.view == 'card')
-            | ╳
-          else
-            | close
+    if query.view == "compact" && (isPostGallery(p) || isPostImage(p) || isPostVideo(p))
+      details(id=`${p.id}`)
+        summary.expand-post expand media
+        div.image-viewer
+          if isPostGallery(p)
+            div.gallery
+              each item in postGalleryItems(p)
+                div.gallery-item
+                  div.gallery-item-idx
+                    | #{`${item.idx}/${item.total}`}
+                  a(href=`/media/${item.url}`)
+                    img(src=item.url loading="lazy")
+          else if isPostImage(p)
+            a(href=`/media/${p.url}`)
+              img(src=p.url loading="lazy").post-media
+          else if isPostVideo(p)
+            video(controls="" muted="" data-dashjs-player="" preload="metadata" playsinline="" poster=decodedVideos[4] objectfit="contain" loading="lazy").post-media
+                //HLS
+                source(src=decodedVideos[0])
+                // Dash
+                source(src=decodedVideos[1])
+                // Fallback
+                source(src=decodedVideos[2])
+          button(onclick=`toggleDetails('${p.id}')`)
+              | close
