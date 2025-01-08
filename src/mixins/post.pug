@@ -36,16 +36,27 @@ mixin post(p, currentUrl)
             div.self-text(class='card')
               != convertInlineImageLinks(p.selftext_html)
       div.media-preview(class=`${query.view}`)
+        - var onclick = query.view != "card" ? `toggleDetails('${p.id}')` : ``
         if query.view == "card" && (p.spoiler || p.over_18) && (isPostGallery(p) || isPostImage(p) || isPostVideo(p))
           div.spoiler(id=`spoiler_${p.id}`, onclick=`javascript:document.getElementById('spoiler_${p.id}').style.display = 'none';`) 
             h2
               != p.over_18 ? 'nsfw' : 'spoiler'
         if isPostGallery(p)
           - var item = postGalleryItems(p)[0]
-          img(src=item.url onclick=`toggleDetails('${p.id}')`) 
+          if query.view == "card"
+            div.gallery(class=`${query.view}`)
+              each item in postGalleryItems(p)
+                div.gallery-item(class=`${query.view}`)
+                  div.gallery-item-idx(class=`${query.view}`)
+                    | #{`${item.idx}/${item.total}`}
+                  a(href=`/media/${item.url}`)
+                    img(src=item.url loading="lazy")
+          else
+            img(src=item.url onclick=onclick) 
         else if isPostImage(p)
           - var url = query.view == "card" ? p.url : postThumbnail(p)
-          img(src=url onclick=`toggleDetails('${p.id}')`)
+          #{query.view == "card" ? "a href=/media/" + url : span}
+            img(src=url onclick=onclick)
         else if isPostVideo(p)
           - var decodedVideos = decodePostVideoUrls(p)
           if query.view == "card"
