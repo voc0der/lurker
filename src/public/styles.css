@@ -82,6 +82,7 @@ main {
 .info-container a,
 .comment-info-container a,
 .sort-opts a,
+.view-opts a,
 .more a
 {
   text-decoration: none;
@@ -116,19 +117,26 @@ a:visited {
   align-items: center;
 }
 
-.sorting {
+.sorting,
+.viewing {
   margin-top: 20px;
 }
 
-.sort-opts {
+.sort-opts,
+.view-opts {
   display: grid;
   margin: 10px;
 }
 
-.sort-opts {
+.sort-opts,
+.view-opts {
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: repeat(5, 1fr);
   grid-auto-flow: column;
+}
+
+.view-opts {
+  grid-template-rows: repeat(2, 1fr);
 }
 
 .footer {
@@ -397,7 +405,8 @@ form {
   form {
     width: 40%;
   }
-  .sort-opts {
+  .sort-opts,
+  .view-opts {
     grid-template-columns: repeat(9, 1fr);
     grid-template-rows: repeat(1, 1fr);
     grid-auto-flow: row;
@@ -442,7 +451,8 @@ form {
   form {
     width: 20%;
   }
-  .sort-opts {
+  .sort-opts,
+  .view-opts {
     grid-template-columns: repeat(9, 1fr);
     grid-template-rows: repeat(1, 1fr);
     grid-auto-flow: row;
@@ -459,7 +469,8 @@ form {
   {
     max-height: 20vh;
   }
-  .sort-opts {
+  .sort-opts,
+  .view-opts {
     grid-template-columns: repeat(9, 1fr);
     grid-template-rows: repeat(1, 1fr);
     grid-auto-flow: row;
@@ -542,6 +553,7 @@ form {
 
 .header a,
 .sort-opts a,
+.view-opts a,
 .sub-title a {
   color: var(--text-color);
 }

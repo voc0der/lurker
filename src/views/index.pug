@@ -55,9 +55,9 @@ html
               a(href=`/r/${subreddit}?sort=top&t=year&view=${viewQuery}`) top year
             div
               a(href=`/r/${subreddit}?sort=top&t=all&view=${viewQuery}`) top all
-        details.sort-details
-          summary.sorting viewing as #{viewQuery}
-          div.sort-opts
+        details.view-details
+          summary.viewing viewing as #{viewQuery}
+          div.view-opts
             div
               a(href=`/r/${subreddit}?sort=${sortQuery}&view=compact`) compact
             div
