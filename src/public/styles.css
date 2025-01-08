@@ -204,11 +204,8 @@ nav {
   align-items: center;
 }
 
-.gallery-item.card > a > img {
-  max-width: 95vw;
-  max-height: 30vh;
-  width: auto;
-  height: auto;
+.gallery-item.card {
+  max-width: 100%;
 }
 
 .spoiler {
