@@ -202,10 +202,17 @@ nav {
 
 .gallery.card {
   align-items: center;
+  scroll-snap-type: both mandatory;
 }
 
 .gallery-item.card {
   max-width: 100%;
+  width: 100%;
+  scroll-snap-align: center;
+}
+
+.gallery-item-idx.card {
+  text-align: center;
 }
 
 .spoiler {

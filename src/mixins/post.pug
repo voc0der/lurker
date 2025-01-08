@@ -47,10 +47,10 @@ mixin post(p, currentUrl)
             div.gallery(class=`${query.view}`)
               each item in postGalleryItems(p)
                 div.gallery-item(class=`${query.view}`)
-                  div.gallery-item-idx(class=`${query.view}`)
-                    | #{`${item.idx}/${item.total}`}
                   a(href=`/media/${item.url}`)
                     img(src=item.url loading="lazy")
+                  div.gallery-item-idx(class=`${query.view}`)
+                    | #{`${item.idx}/${item.total}`}
           else
             img(src=item.url onclick=onclick) 
         else if isPostImage(p)
