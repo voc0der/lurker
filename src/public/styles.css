@@ -206,7 +206,7 @@ nav {
 
 .gallery-item.card > a > img {
   max-width: 95vw;
-  max-height: 95vh;
+  max-height: 30vh;
   width: auto;
   height: auto;
 }
@@ -231,6 +231,8 @@ nav {
   align-items: center;
 
   cursor: pointer;
+
+  z-index: 10;
 }
 
 .gallery-item-idx.card,
