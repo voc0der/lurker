@@ -51,6 +51,21 @@ body:has(details.card[open]) {
   overflow: hidden;
 }
 
+body.media-maximized {
+  /* Fix for Safari User Agent stylesheet */
+  margin: 0;
+}
+
+body.media-maximized.zoom,
+div.media-maximized.container.zoom {
+  overflow: auto;
+}
+
+img.media-maximized.zoom {
+  max-width: unset;
+  max-height: unset;
+}
+
 main {
   display: flex;
   flex-direction: column;
@@ -326,15 +341,6 @@ summary::before {
   padding: 1rem;
 }
 
-.media-maximized-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-}
-
 .media-maximized {
   max-width: 100vw;
   max-height: 100vh;
@@ -343,6 +349,15 @@ summary::before {
   display: block;
   margin: auto;
   object-fit: contain;
+}
+
+.media-maximized.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .post-author {
