@@ -2,9 +2,14 @@ include ../mixins/head
 doctype html
 html
   +head("home")
-  body
-    div.media-maximized-container
+  script(type='text/javascript').
+    function toggleZoom() {
+      Array.from(document.getElementsByClassName('media-maximized')).forEach(element => element.classList.toggle('zoom'));
+    }
+
+  body.media-maximized
+    div.media-maximized.container
       if kind == 'img'
-        img(src=url).media-maximized
+        img(src=url onclick=`toggleZoom()`).media-maximized
       else
         video(src=url controls).media-maximized

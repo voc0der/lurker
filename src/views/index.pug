@@ -2,6 +2,8 @@ include ../mixins/post
 include ../mixins/header
 include ../mixins/head
 include ../utils
+  - var viewQuery = query && query.view ? query.view : 'compact'
+  - var sortQuery = query && query.sort ? query.sort + (query.t ? '&t=' + query.t : '') : 'hot'
 doctype html
 html
   +head("home")
@@ -14,9 +16,9 @@ html
         div.sub-title
           h1 
             if isMulti
-              a(href=`/`) lurker
+              a(href=`/?sort=${sortQuery}&view=${viewQuery}`) lurker
             else
-              a(href=`/r/${subreddit}`)
+              a(href=`/r/${subreddit}?sort=${sortQuery}&view=${viewQuery}`)
                 | r/#{subreddit}
           if !isMulti
             div#button-container
@@ -32,27 +34,34 @@ html
             a(href="https://donate.stripe.com/dR62bTaZH1295Da4gg") oppiliappan
             |, author of lurker
         hr
-        details
+        details.sort-details
           summary.sorting sorting by #{query.sort + (query.t?' '+query.t:'')}
           div.sort-opts
             div
-              a(href=`/r/${subreddit}?sort=hot`) hot
+              a(href=`/r/${subreddit}?sort=hot&view=${viewQuery}`) hot
             div
-              a(href=`/r/${subreddit}?sort=new`) new
+              a(href=`/r/${subreddit}?sort=new&view=${viewQuery}`) new
             div
-              a(href=`/r/${subreddit}?sort=rising`) rising
+              a(href=`/r/${subreddit}?sort=rising&view=${viewQuery}`) rising
             div
-              a(href=`/r/${subreddit}?sort=top`) top
+              a(href=`/r/${subreddit}?sort=top&view=${viewQuery}`) top
             div
-              a(href=`/r/${subreddit}?sort=top&t=day`) top day
+              a(href=`/r/${subreddit}?sort=top&t=day&view=${viewQuery}`) top day
             div
-              a(href=`/r/${subreddit}?sort=top&t=week`) top week
+              a(href=`/r/${subreddit}?sort=top&t=week&view=${viewQuery}`) top week
             div
-              a(href=`/r/${subreddit}?sort=top&t=month`) top month
+              a(href=`/r/${subreddit}?sort=top&t=month&view=${viewQuery}`) top month
             div
-              a(href=`/r/${subreddit}?sort=top&t=year`) top year
+              a(href=`/r/${subreddit}?sort=top&t=year&view=${viewQuery}`) top year
             div
-              a(href=`/r/${subreddit}?sort=top&t=all`) top all
+              a(href=`/r/${subreddit}?sort=top&t=all&view=${viewQuery}`) top all
+        details.view-details
+          summary.viewing viewing as #{viewQuery}
+          div.view-opts
+            div
+              a(href=`/r/${subreddit}?sort=${sortQuery}&view=compact`) compact
+            div
+              a(href=`/r/${subreddit}?sort=${sortQuery}&view=card`) card
 
       if posts
         each child in posts.posts

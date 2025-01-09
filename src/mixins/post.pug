@@ -2,11 +2,13 @@ include ../utils
 include postUtils
 mixin post(p, currentUrl)
   - var from = encodeURIComponent(currentUrl)
-  article(class=`post ${p.stickied?"sticky":""}`)
-    div.post-container
-      div.post-text
-        div.title-container
-          a(href=`/comments/${p.id}?from=${from}`)
+  - var viewQuery = query && query.view ? query.view : 'compact'
+  - var sortQuery = query && query.sort ? query.sort + (query.t ? '&t=' + query.t : '') : 'hot'
+  article(class=`post`)
+    div.post-container(class=`${query.view} ${p.stickied?"sticky":""}`)
+      div.post-text(class=`${query.view}`)
+        div.title-container(class=`${query.view}`)
+          a(class=`${query.view}`, href=`/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}`)
             != p.title
           span.domain   (#{p.domain})
         div.info-container 
@@ -22,50 +24,81 @@ mixin post(p, currentUrl)
             | &nbsp;·&nbsp;
             | #{timeDifference(Date.now(), p.created * 1000)}
             | &nbsp;·&nbsp;
-            a(href=`/r/${p.subreddit}`) r/#{p.subreddit}
+            a(href=`/r/${p.subreddit}?sort=${sortQuery}&view=${viewQuery}`) r/#{p.subreddit}
             | &nbsp;·&nbsp;
-            a(href=`/comments/${p.id}?from=${from}`) #{fmtnum (p.num_comments)} ↩
-      div.media-preview
+            a(href=`/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}`) #{fmtnum (p.num_comments)} ↩
+        if (query.view == "card" && !isPostGallery(p) && !isPostImage(p) && !isPostVideo(p) && p.selftext_html)
+          div.self-text-overflow(class='card')
+            if query.view == "card" && (p.spoiler || p.over_18)
+              div.spoiler(id=`spoiler_${p.id}`, onclick=`javascript:document.getElementById('spoiler_${p.id}').style.display = 'none';`)
+                h2
+                  != p.over_18 ? 'nsfw' : 'spoiler'
+            div.self-text(class='card')
+              != convertInlineImageLinks(p.selftext_html)
+      div.media-preview(class=`${query.view}`)
+        - var onclick = query.view != "card" ? `toggleDetails('${p.id}')` : ``
+        if query.view == "card" && (p.spoiler || p.over_18) && (isPostGallery(p) || isPostImage(p) || isPostVideo(p))
+          div.spoiler(id=`spoiler_${p.id}`, onclick=`javascript:document.getElementById('spoiler_${p.id}').style.display = 'none';`) 
+            h2
+              != p.over_18 ? 'nsfw' : 'spoiler'
         if isPostGallery(p)
           - var item = postGalleryItems(p)[0]
-          img(src=item.url onclick=`toggleDetails('${p.id}')`) 
+          if query.view == "card"
+            div.gallery(class=`${query.view}`)
+              each item in postGalleryItems(p)
+                div.gallery-item(class=`${query.view}`)
+                  a(href=`/media/${item.url}`)
+                    img(src=item.url loading="lazy")
+                  div.gallery-item-idx(class=`${query.view}`)
+                    | #{`${item.idx}/${item.total}`}
+          else
+            img(src=item.url onclick=onclick) 
         else if isPostImage(p)
-          - var url = postThumbnail(p)
-          img(src=url onclick=`toggleDetails('${p.id}')`)
+          - var url = query.view == "card" ? p.url : postThumbnail(p)
+          #{query.view == "card" ? "a href=/media/" + url : span}
+            img(src=url onclick=onclick)
         else if isPostVideo(p)
-          - var url = p.secure_media.reddit_video.scrubber_media_url
-          video(src=url data-dashjs-player width='100px' height='100px' onclick=`toggleDetails('${p.id}')`)
+          - var decodedVideos = decodePostVideoUrls(p)
+          if query.view == "card"
+            video(controls="" muted="" data-dashjs-player="" preload="metadata" poster=decodedVideos[4])
+              // HLS
+              source(src=decodedVideos[0])
+              // Dash
+              source(src=decodedVideos[1])
+              // Fallback
+              source(src=decodedVideos[2])
+          else
+            video(autoplay="" muted="" data-dashjs-player="" onclick=`toggleDetails('${p.id}')` width="100px" height="100px")
+              // Scrubber
+              source(src=decodedVideos[3])
         else if isPostLink(p)
           a(href=p.url)
+            if (query.view == 'card')
+              | #{p.domain} 
             | ↗
 
-    if isPostGallery(p)
+    if query.view == "compact" && (isPostGallery(p) || isPostImage(p) || isPostVideo(p))
       details(id=`${p.id}`)
-        summary.expand-post expand gallery
-        div.gallery
-          each item in postGalleryItems(p)
-            div.gallery-item
-              div.gallery-item-idx
-                | #{`${item.idx}/${item.total}`}
-              a(href=`/media/${item.url}`)
-                img(src=item.url loading="lazy")
-        button(onclick=`toggleDetails('${p.id}')`) close
-    else if isPostImage(p)
-      details(id=`${p.id}`)
-        summary.expand-post expand image
-        a(href=`/media/${p.url}`)
-          img(src=p.url loading="lazy").post-media
-        button(onclick=`toggleDetails('${p.id}')`) close
-    else if isPostVideo(p)
-      details(id=`${p.id}`)
-        summary.expand-post expand video
-        - var url = p.secure_media.reddit_video.dash_url
-        video(src=url controls data-dashjs-player loading="lazy").post-media
-        button(onclick=`toggleDetails('${p.id}')`) close
-    else if isPostLink(p)
-      details(id=`${p.id}`)
-        summary.expand-post expand link
-        a(href=`${p.url}`)
-          | #{p.url}
-        br
-        button(onclick=`toggleDetails('${p.id}')`) close
+        summary.expand-post expand media
+        div.image-viewer
+          if isPostGallery(p)
+            div.gallery
+              each item in postGalleryItems(p)
+                div.gallery-item
+                  div.gallery-item-idx
+                    | #{`${item.idx}/${item.total}`}
+                  a(href=`/media/${item.url}`)
+                    img(src=item.url loading="lazy")
+          else if isPostImage(p)
+            a(href=`/media/${p.url}`)
+              img(src=p.url loading="lazy").post-media
+          else if isPostVideo(p)
+            video(controls="" muted="" data-dashjs-player="" preload="metadata" playsinline="" poster=decodedVideos[4] objectfit="contain" loading="lazy").post-media
+                //HLS
+                source(src=decodedVideos[0])
+                // Dash
+                source(src=decodedVideos[1])
+                // Fallback
+                source(src=decodedVideos[2])
+          button(onclick=`toggleDetails('${p.id}')`)
+              | close

@@ -10,14 +10,14 @@
   }
 -
   function postThumbnail(p) {
-    if (p.thumbnail == "image" || p.thumbnail == "") {
-        return p.url;
-    } else if (p.over_18) {
-        return "/nsfw.svg";
+    if (p.over_18) {
+      return "/nsfw.svg";
     } else if (p.thumbnail == "spoiler") {
-        return "/spoiler.svg";
+      return "/spoiler.svg";
+    } else if (p.thumbnail == "image" || p.thumbnail == "") {
+      return p.url;
     } else {
-        return p.thumbnail;
+      return p.thumbnail;
     }
   }
 -
@@ -50,4 +50,35 @@
     } else {
       return null;
     }
+  }
+-
+  function convertInlineImageLinks(html) {
+    // Find all anchors that href to preview.redd.it, i.redd.it, i.imgur.com
+    // and contain just a link to the same href
+    const expression = /<a href="(http[s]?:\/\/(?:preview\.redd\.it|i\.redd\.it|i\.imgur\.com).*?)">\1?<\/a>/g;
+    const matches = html.matchAll(expression);
+    var result = html;
+    matches.forEach((match) => {
+      // Replace each occurrence with an actual img tag
+      result = result.replace(match[0], '<a href="' + match[1] + '"><img class="inline" src="' + match[1] + '"></a>');
+    })
+
+    return result;
+  }
+-
+  function decodePostVideoUrls(p) {
+    // Video URLs have querystring separators that are HTML-encoded, so replace them.
+    const expression = /&amp;/g;
+
+    var hls_url = p.secure_media && p.secure_media.reddit_video && p.secure_media.reddit_video.hls_url ? p.secure_media.reddit_video.hls_url.replace(expression, '&') : '';
+
+    var dash_url = p.secure_media && p.secure_media.reddit_video && p.secure_media.reddit_video.dash_url ? p.secure_media.reddit_video.dash_url.replace(expression, '&') : '';
+
+    var fallback_url = p.secure_media && p.secure_media.reddit_video && p.secure_media.reddit_video.fallback_url ? p.secure_media.reddit_video.fallback_url.replace(expression, '&') : '';
+
+    var scrubber_url = p.secure_media && p.secure_media.reddit_video && p.secure_media.reddit_video.scrubber_media_url ? p.secure_media.reddit_video.scrubber_media_url.replace(expression, '&') : '';
+
+    var poster_url = p.preview && p.preview.images ? p.preview.images[0].source.url.replace(expression, '&') : '';
+
+    return [hls_url, dash_url, fallback_url, scrubber_url, poster_url];
   }

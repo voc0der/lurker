@@ -1,4 +1,5 @@
 include ../utils
+include postUtils
 
 mixin infoContainer(data, next_id, prev_id)
   - var hats = (data.is_submitter?['op']:[]).concat(data.distinguished=="moderator"?['mod']:[])
@@ -51,7 +52,7 @@ mixin comment(com, isfirst, parent_id, next_id, prev_id)
         summary.expand-comments
           +infoContainer(data, next_id, prev_id)
         div.comment-body
-          != data.body_html
+          != convertInlineImageLinks(data.body_html)
         if hasReplyData
           div.replies
             - var total = data.replies.data.children.length

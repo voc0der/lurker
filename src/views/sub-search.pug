@@ -1,6 +1,8 @@
 include ../mixins/header
 include ../mixins/head
 
+- var viewQuery = (query && query.view) ? query.view : 'compact'
+- var sortQuery = (query && query.sort) ? query.sort + (query.t ? '&t=' + query.t : '') : 'hot'
 doctype html
 html
   +head("search subreddits")
@@ -13,6 +15,8 @@ html
         form(action="/sub-search" method="get").search-bar
           - var prefill = original_query ?? "";
           input(type="text" name="q" placeholder="type in a search term..." value=prefill required).search-input
+          input(type="hidden" name="sort" value=sortQuery)
+          input(type="hidden" name="view" value=viewQuery)
           button(type="submit").search-button go
         if message
           div.search-message
@@ -25,7 +29,7 @@ html
                 - var isSubbed = subs.includes(subreddit)
                 div.sub-title
                   h3
-                    a(href=`/r/${subreddit}`) 
+                    a(href=`/r/${subreddit}?sort=${sortQuery}&view=${viewQuery}`) 
                       | r/#{subreddit}
                   div#button-container
                     if isSubbed
