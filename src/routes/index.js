@@ -94,21 +94,31 @@ async function loginViaHeaders(req, res, next) {
 
 // GET /
 router.get("/", authenticateToken, async (req, res) => {
-  const subs = db.query("SELECT * FROM subscriptions WHERE user_id = $id").all({ id: req.user.id });
-  if (subs.length === 0) {
-    res.redirect("/r/all");
-  } else {
-    const p = subs.map((s) => s.subreddit).join("+");
-    res.redirect(`/r/${p}`);
-  }
+	const subs = db
+		.query("SELECT * FROM subscriptions WHERE user_id = $id")
+		.all({ id: req.user.id });
+
+	const qs = req.query ? ('?' + new URLSearchParams(req.query).toString()) : '';
+
+	if (subs.length === 0) {
+		res.redirect(`/r/all${qs}`);
+	} else {
+		const p = subs.map((s) => s.subreddit).join("+");
+		res.redirect(`/r/${p}${qs}`);
+	}
 });
 
 // GET /r/:id
 router.get("/r/:subreddit", authenticateToken, async (req, res) => {
-  const subreddit = req.params.subreddit;
-  const isMulti = subreddit.includes("+");
-  const query = req.query || {};
-  query.sort = query.sort || "hot";
+	const subreddit = req.params.subreddit;
+	const isMulti = subreddit.includes("+");
+	const query = req.query ? req.query : {};
+	if (!query.sort) {
+		query.sort = "hot";
+	}
+	if (!query.view) {
+		query.view = "compact";
+	}
 
   let isSubbed = false;
   if (!isMulti) {
@@ -119,6 +129,10 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
   const postsReq = G.getSubmissions(query.sort, subreddit, query);
   const aboutReq = G.getSubreddit(subreddit);
   const [posts, about] = await Promise.all([postsReq, aboutReq]);
+
+	if (query.view == 'card' && posts && posts.posts) {
+		posts.posts.forEach(unescape_selftext);
+	}
 
 	res.render("index", {
 		subreddit,
@@ -144,6 +158,7 @@ router.get("/comments/:id", authenticateToken, async (req, res) => {
 		data: unescape_submission(response),
 		user: req.user,
 		from: req.query.from,
+		query: req.query,
 	});
 });
 
@@ -177,12 +192,12 @@ router.get("/subs", authenticateToken, async (req, res) => {
 		)
 		.all({ id: req.user.id });
 
-	res.render("subs", { subs, user: req.user });
+	res.render("subs", { subs, user: req.user, query: req.query });
 });
 
 // GET /search
 router.get("/search", authenticateToken, async (req, res) => {
-	res.render("search", { user: req.user });
+	res.render("search", { user: req.user, query: req.query });
 });
 
 // GET /sub-search
@@ -206,6 +221,7 @@ router.get("/sub-search", authenticateToken, async (req, res) => {
 			message,
 			user: req.user,
 			original_query: req.query.q,
+			query: req.query,
 		});
 	}
 });
@@ -220,6 +236,11 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 			items.length === 0
 				? "no results found"
 				: `showing ${items.length} results`;
+
+		if (req.query.view == 'card' && items) {
+			items.forEach(unescape_selftext);
+		}
+	
 		res.render("post-search", {
 			items,
 			after,
@@ -227,6 +248,7 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 			user: req.user,
 			original_query: req.query.q,
 			currentUrl: req.url,
+			query: req.query,
 		});
 	}
 });
@@ -249,7 +271,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 				usedAt: Date.parse(inv.usedAt),
 			}));
 	}
-	res.render("dashboard", { invites, isAdmin, user: req.user });
+	res.render("dashboard", { invites, isAdmin, user: req.user, query: req.query });
 });
 
 router.get("/create-invite", authenticateAdmin, async (req, res) => {
@@ -433,12 +455,21 @@ function unescape_submission(response) {
 	const post = response.submission.data;
 	const comments = response.comments;
 
-	if (post.selftext_html) {
-		post.selftext_html = he.decode(post.selftext_html);
-	}
+	unescape_selftext(post);
 	comments.forEach(unescape_comment);
 
 	return { post, comments };
+}
+
+function unescape_selftext(post) {
+	// If called after getSubmissions
+	if (post.data && post.data.selftext_html) {
+		post.data.selftext_html = he.decode(post.data.selftext_html);
+	}
+	// If called after getSubmissionComments
+	if (post.selftext_html) {
+		post.selftext_html = he.decode(post.selftext_html);
+	}
 }
 
 function unescape_comment(comment) {

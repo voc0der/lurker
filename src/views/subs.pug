@@ -1,6 +1,8 @@
 include ../mixins/header
 include ../mixins/head
 
+- var viewQuery = query && query.view ? query.view : 'compact'
+- var sortQuery = query && query.sort ? query.sort + (query.t ? '&t=' + query.t : '') : 'hot'
 doctype html
 html
   +head("subscriptions")
@@ -16,7 +18,7 @@ html
             - var isSubbed = true
             div.sub-title
               h4
-                a(href=`/r/${subreddit}`) 
+                a(href=`/r/${subreddit}?sort=${sortQuery}&view=${viewQuery}`) 
                   | r/#{subreddit}
               div#button-container
                 if isSubbed
