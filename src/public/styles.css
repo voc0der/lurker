@@ -302,19 +302,14 @@ summary::before {
   object-fit: fill;
 }
 
-.image-viewer a {
-  font-size: 1.5rem;
-  padding: unset;
-  padding-left: 1rem;
-}
-
 .image-viewer a:has(img) {
   font-size: 0rem;
   padding: unset;
 }
 
-.media-preview a {
-  font-size: 2rem;
+.media-preview a,
+.image-viewer a {
+  font-size: 1.5rem;
   text-decoration: none;
   padding: 1rem;
 }
@@ -479,7 +474,7 @@ form {
   margin-top: 10px;
 }
 
-.post-container {
+.post-info {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -616,6 +611,13 @@ details[open] summary::before {
 details:not([open]) summary::before {
   content: "";
   padding-right: 10px;
+}
+
+details.compact {
+  /*
+  display: flex;
+  flex-basis: 100%;
+  */
 }
 
 .footer {
