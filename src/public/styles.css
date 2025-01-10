@@ -11,6 +11,9 @@
   --link-visited-color: #999;
   --accent: var(--link-color);
   --error-text-color: red;
+  --border-radius-card: 8px;
+  --border-radius-media: 6px;
+  --border-radius-preview: 4px;
 
   font-family: Inter, sans-serif;
   font-feature-settings: 'ss01' 1, 'kern' 1, 'liga' 1, 'cv05' 1, 'dlig' 1, 'ss01' 1, 'ss07' 1, 'ss08' 1;
@@ -45,10 +48,6 @@ body {
   overflow-x: hidden;
   background-color: var(--bg-color);
   color: var(--text-color);
-}
-
-body:has(details.card[open]) {
-  overflow: hidden;
 }
 
 body.media-maximized {
@@ -169,7 +168,7 @@ nav {
 
 .post-container.card {
   border: 1px solid var(--bg-color-muted);
-  border-radius: 8px;
+  border-radius: var(--border-radius-card);
   display: block;
 }
 
@@ -198,29 +197,14 @@ nav {
   text-overflow: ellipsis;
 }
 
-.media-preview.card {
+.image-viewer {
   position: relative;
   padding: 0.3rem;
   padding-bottom: 0.3rem;
 }
 
-.media-preview.card > img {
+.image-viewer > img {
   cursor: pointer;
-}
-
-.gallery.card {
-  align-items: center;
-  scroll-snap-type: both mandatory;
-}
-
-.gallery-item.card {
-  max-width: 100%;
-  width: 100%;
-  scroll-snap-align: center;
-}
-
-.gallery-item-idx.card {
-  text-align: center;
 }
 
 .spoiler {
@@ -228,7 +212,7 @@ nav {
   /* Safari on iOS <= 17 */
   -webkit-backdrop-filter: blur(3rem);
   backdrop-filter: blur(3rem);
-  border-radius: 4px;
+  border-radius: var(--border-radius-preview);
 
   position: absolute;
   top: 0;
@@ -247,7 +231,7 @@ nav {
   z-index: 10;
 }
 
-.gallery-item-idx.card,
+.gallery-item-idx,
 .spoiler > h2 {
   text-shadow: 0.1rem 0.1rem 1rem var(--bg-color-muted);
 }
@@ -294,15 +278,16 @@ summary::before {
   object-fit: cover;
   width: 4rem;
   height: 4rem;
+  border-radius: var(--border-radius-preview);
 }
 
-.media-preview.card {
+.image-viewer {
   padding: unset;
 }
 
-.media-preview.card img,
-.media-preview.card video {
-  border-radius: 6px;
+.image-viewer img,
+.image-viewer video {
+  border-radius: var(--border-radius-media);
 
   max-height: 40vh;
   max-width: 95%;
@@ -317,13 +302,13 @@ summary::before {
   object-fit: fill;
 }
 
-.media-preview.card a {
+.image-viewer a {
   font-size: 1.5rem;
   padding: unset;
   padding-left: 1rem;
 }
 
-.media-preview.card a:has(img) {
+.image-viewer a:has(img) {
   font-size: 0rem;
   padding: unset;
 }
@@ -382,12 +367,12 @@ form {
     width: 5rem;
     height: 5rem;
   }
-  .media-preview.card img,
-  .media-preview.card video
+  .image-viewer img,
+  .image-viewer video
   {
     max-height: 50vh;
   }
-  .media-preview.card a {
+  .image-viewer a {
     font-size: 1rem;
     margin: 0.7rem;
     padding: initial;
@@ -424,8 +409,8 @@ form {
     width: 5rem;
     height: 5rem;
   }
-  .media-preview.card img,
-  .media-preview.card video
+  .image-viewer img,
+  .image-viewer video
   {
     max-height: 30vh;
   }
@@ -433,7 +418,7 @@ form {
     font-size: 2rem;
     padding: 2rem;
   }
-  .media-preview.card a {
+  .image-viewer a {
     font-size: 1rem;
     margin: 0.5rem;
     padding: initial;
@@ -464,8 +449,8 @@ form {
     flex: 1 1 40%;
     width: 40%;
   }
-  .media-preview.card img,
-  .media-preview.card video
+  .image-viewer img,
+  .image-viewer video
   {
     max-height: 20vh;
   }
@@ -648,11 +633,20 @@ a {
   overflow-x: auto;
   position: relative;
   padding: 5px;
+  align-items: center;
+  scroll-snap-type: both mandatory;
 }
 
 .gallery-item {
   flex: 0 0 auto;
   margin-right: 10px;
+  max-width: 100%;
+  width: 100%;
+  scroll-snap-align: center;
+}
+
+.gallery-item-idx {
+  text-align: center;
 }
 
 .gallery img {
