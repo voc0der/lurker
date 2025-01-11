@@ -11,9 +11,9 @@
   --link-visited-color: #999;
   --accent: var(--link-color);
   --error-text-color: red;
-  --border-radius-card: 8px;
-  --border-radius-media: 6px;
-  --border-radius-preview: 4px;
+  --border-radius-card: 4vmin;
+  --border-radius-media: 3vmin;
+  --border-radius-preview: 2vmin;
 
   font-family: Inter, sans-serif;
   font-feature-settings: 'ss01' 1, 'kern' 1, 'liga' 1, 'cv05' 1, 'dlig' 1, 'ss01' 1, 'ss07' 1, 'ss08' 1;
@@ -302,6 +302,15 @@ summary::before {
   object-fit: fill;
 }
 
+.image-viewer.main-content img,
+.image-viewer.main-content video {
+  max-height: 70vh;
+}
+
+.image-viewer.main-content a {
+  margin: unset;
+}
+
 .image-viewer a:has(img) {
   font-size: 0rem;
   padding: unset;
@@ -311,7 +320,8 @@ summary::before {
 .image-viewer a {
   font-size: 1.5rem;
   text-decoration: none;
-  padding: 1rem;
+  padding: unset;
+  margin: 1rem;
 }
 
 .media-maximized {
@@ -415,7 +425,7 @@ form {
   }
   .image-viewer a {
     font-size: 1rem;
-    margin: 0.5rem;
+    margin: 1rem;
     padding: initial;
   }
   .self-text.card {
@@ -611,13 +621,6 @@ details[open] summary::before {
 details:not([open]) summary::before {
   content: "";
   padding-right: 10px;
-}
-
-details.compact {
-  /*
-  display: flex;
-  flex-basis: 100%;
-  */
 }
 
 .footer {

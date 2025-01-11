@@ -47,7 +47,7 @@ mixin post(p, currentUrl)
               img(src=url onclick=onclick)
             else if isPostVideo(p)
               - var decodedVideos = decodePostVideoUrls(p)
-              video(autoplay="" muted="" data-dashjs-player="" onclick=`toggleDetails('${p.id}')` poster=decodedVideos[4] width="100px" height="100px")
+              video(autoplay="" playsinline="" muted="" data-dashjs-player="" onclick=`toggleDetails('${p.id}')` poster=decodedVideos[4] width="100px" height="100px")
                 // Scrubber
                 source(src=decodedVideos[3])
             else if isPostLink(p)
