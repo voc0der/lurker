@@ -199,8 +199,12 @@ nav {
 
 .image-viewer {
   position: relative;
-  padding: 0.3rem;
-  padding-bottom: 0.3rem;
+  margin: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.image-viewer:not(:has(details)) {
+  margin: unset;
 }
 
 .image-viewer > img {
@@ -281,15 +285,11 @@ summary::before {
   border-radius: var(--border-radius-preview);
 }
 
-.image-viewer {
-  padding: unset;
-}
-
 .image-viewer img,
 .image-viewer video {
   border-radius: var(--border-radius-media);
 
-  max-height: 40vh;
+  max-height: 50vh;
   max-width: 95%;
 
   display: block;
@@ -380,7 +380,7 @@ form {
   .image-viewer img,
   .image-viewer video
   {
-    max-height: 50vh;
+    max-height: 45vh;
   }
   .image-viewer a {
     font-size: 1rem;
@@ -426,7 +426,7 @@ form {
   .image-viewer img,
   .image-viewer video
   {
-    max-height: 30vh;
+    max-height: 35vh;
   }
   .media-preview a {
     font-size: 2rem;
@@ -470,7 +470,7 @@ form {
   .image-viewer img,
   .image-viewer video
   {
-    max-height: 20vh;
+    max-height: 30vh;
   }
   .sort-opts,
   .view-opts {
@@ -665,11 +665,6 @@ a {
 
 .gallery-item-idx {
   text-align: center;
-}
-
-.gallery img {
-    width: auto;
-    max-height: 500px;
 }
 
 .post-title {
