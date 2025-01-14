@@ -28,7 +28,7 @@ mixin post(p, currentUrl)
               a(href=`/r/${p.subreddit}?sort=${sortQuery}&view=${viewQuery}`) r/#{p.subreddit}
               | &nbsp;·&nbsp;
               a(href=`/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}`) #{fmtnum (p.num_comments)} ↩
-          if (query.view == "card" && !isPostGallery(p) && !isPostImage(p) && !isPostVideo(p) && p.selftext_html)
+          if (query.view == "card" && !isPostMedia(p) && p.selftext_html)
             div.self-text-overflow.card
               if p.spoiler || p.over_18
                 div.spoiler(id=`spoiler_${p.id}`, onclick=`javascript:document.getElementById('spoiler_${p.id}').style.display = 'none';`)
@@ -54,10 +54,10 @@ mixin post(p, currentUrl)
               a(href=p.url)
                 | ↗
 
-      details(id=`${p.id}` open=(query.view == "card") class=`${query.view}`)
+      details(id=`${p.id}` open=(query.view == "card" && (isPostMedia(p) || isPostLink(p))) class=`${query.view}`)
         summary.expand-post expand media
         div.image-viewer
-          if query.view == "card" && (p.spoiler || p.over_18) && (isPostGallery(p) || isPostImage(p) || isPostVideo(p))
+          if query.view == "card" && (p.spoiler || p.over_18) && isPostMedia(p)
             div.spoiler(id=`spoiler_${p.id}`, onclick=`javascript:document.getElementById('spoiler_${p.id}').style.display = 'none';`) 
               h2
                 != p.over_18 ? 'nsfw' : 'spoiler'

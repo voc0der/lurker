@@ -11,9 +11,9 @@
   --link-visited-color: #999;
   --accent: var(--link-color);
   --error-text-color: red;
-  --border-radius-card: 4vmin;
-  --border-radius-media: 3vmin;
-  --border-radius-preview: 2vmin;
+  --border-radius-card: 2vmin;
+  --border-radius-media: 1.5vmin;
+  --border-radius-preview: 1vmin;
 
   font-family: Inter, sans-serif;
   font-feature-settings: 'ss01' 1, 'kern' 1, 'liga' 1, 'cv05' 1, 'dlig' 1, 'ss01' 1, 'ss07' 1, 'ss08' 1;
@@ -174,7 +174,10 @@ nav {
 
 .post-text.card {
   padding: 0.9rem;
-  padding-top: 0.3rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  overflow-wrap: break-word;
+  max-width: 95%;
 }
 
 .self-text-overflow.card {
@@ -185,6 +188,7 @@ nav {
   overflow: hidden;
   overflow-wrap: break-word;
   display: block;
+  max-width: 98%;
 }
 
 .self-text.card {
@@ -200,11 +204,6 @@ nav {
 .image-viewer {
   position: relative;
   margin: 0.9rem;
-  margin-bottom: 0.3rem;
-}
-
-.image-viewer:not(:has(details)) {
-  margin: unset;
 }
 
 .image-viewer > img {
@@ -314,6 +313,7 @@ summary::before {
 .image-viewer a:has(img) {
   font-size: 0rem;
   padding: unset;
+  margin: unset;
 }
 
 .media-preview a,
@@ -363,7 +363,7 @@ form {
 
 @media (min-width: 768px) {
   :root {
-    --border-radius-card: 2vmin;
+    --border-radius-card: 1vmin;
     --border-radius-media: 1vmin;
     --border-radius-preview: 0.5vmin;  
   }
@@ -387,9 +387,11 @@ form {
     margin: 0.7rem;
     padding: initial;
   }
-  .self-text.card {
-    -webkit-line-clamp: 4;
-    line-clamp: 4;
+  .post-text.card {
+    max-width: 100%;
+  }
+  .self-text-overflow.card {
+    max-width: 100%;
   }
   .post-author {
     display: inline
@@ -410,8 +412,9 @@ form {
 
 @media (min-width: 1080px) {
   :root {
-    --border-radius-card: 1vmin;
-    --border-radius-media: 1vmin;
+    --border-radius-card: 0.5vmin;
+    --border-radius-media: 0.5vmin;
+    --border-radius-preview: 0.3vmin;
   }
   .post, .comments-container, .hero, .header, .footer {
     flex: 1 1 60%;
@@ -438,8 +441,8 @@ form {
     padding: initial;
   }
   .self-text.card {
-    -webkit-line-clamp: 6;
-    line-clamp: 6;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
   }
   .post-author {
     display: inline
@@ -459,10 +462,6 @@ form {
 }
 
 @media (min-width: 2560px) {
-  :root {
-    --border-radius-card: 0.75vmin;
-    --border-radius-media: 0.75vmin;
-  }
   .post, .comments-container, .hero, .header, .footer {
     flex: 1 1 40%;
     width: 40%;
