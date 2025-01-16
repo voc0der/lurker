@@ -47,7 +47,7 @@ mixin post(p, currentUrl)
               img(src=url onclick=onclick)
             else if isPostVideo(p)
               - var decodedVideos = decodePostVideoUrls(p)
-              video(autoplay="" playsinline="" muted="" data-dashjs-player="" onclick=`toggleDetails('${p.id}')` poster=decodedVideos[4] width="100px" height="100px")
+              video(data-dashjs-player="" playsinline="" autoplay="" muted="" onclick=`toggleDetails('${p.id}')` poster=decodedVideos[4] width="100px" height="100px")
                 // Scrubber
                 source(src=decodedVideos[3])
             else if isPostLink(p)
@@ -74,13 +74,7 @@ mixin post(p, currentUrl)
               img(src=p.url loading="lazy")
           else if isPostVideo(p)
             - var decodedVideos = decodePostVideoUrls(p)
-            video(controls="" muted="" data-dashjs-player="" preload="metadata" playsinline="" poster=decodedVideos[4] objectfit="contain" loading="lazy")
-                // HLS
-                source(src=decodedVideos[0])
-                // Dash
-                source(src=decodedVideos[1])
-                // Fallback
-                source(src=decodedVideos[2])
+            video(data-dashjs-player="" playsinline="" controls="" muted="" preload="metadata" poster=decodedVideos[4] src=decodedVideos[1])
           else if isPostLink(p)
             a(href=p.url)
               | #{p.domain} ↗
