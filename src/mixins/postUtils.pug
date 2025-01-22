@@ -1,4 +1,8 @@
 -
+  function isPostMedia(p) {
+    return isPostImage(p) || isPostGallery(p) || isPostVideo(p);
+  }
+-
   function isPostGallery(p) {
     return (p.is_gallery && p.is_gallery == true);
   }
