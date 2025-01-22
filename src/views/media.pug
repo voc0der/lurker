@@ -3,13 +3,18 @@ doctype html
 html
   +head("home")
   script(type='text/javascript').
-    function toggleZoom() {
+    function toggleZoom(event) {
+      const percentX = event.offsetX / event.target.width;
+      const percentY = event.offsetY / event.target.height;
       Array.from(document.getElementsByClassName('media-maximized')).forEach(element => element.classList.toggle('zoom'));
+      const moveClientX = (event.target.width * percentX) + event.target.offsetLeft - (event.view.visualViewport.width / 2)
+      const moveClientY = (event.target.height * percentY) + event.target.offsetTop - (event.view.visualViewport.height / 2);
+      event.target.parentElement.scrollTo(moveClientX, moveClientY);
     }
 
   body.media-maximized
     div.media-maximized.container
       if kind == 'img'
-        img(src=url onclick=`toggleZoom()`).media-maximized
+        img(src=url onclick=`toggleZoom(event)`).media-maximized
       else
         video(src=url controls).media-maximized
