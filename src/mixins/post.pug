@@ -25,9 +25,9 @@ mixin post(p, currentUrl)
               | &nbsp;·&nbsp;
               | #{timeDifference(Date.now(), p.created * 1000)}
               | &nbsp;·&nbsp;
-              a(href=`/r/${p.subreddit}?sort=${sortQuery}&view=${viewQuery}`) r/#{p.subreddit}
+              a(href=`/r/${p.subreddit}`) r/#{p.subreddit}
               | &nbsp;·&nbsp;
-              a(href=`/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}`) #{fmtnum (p.num_comments)} ↩
+              a(href=`/comments/${p.id}?from=${from}`) #{fmtnum (p.num_comments)} ↩
           if (query.view == "card" && !isPostMedia(p) && p.selftext_html)
             div.self-text-overflow.card
               if p.spoiler || p.over_18

@@ -60,7 +60,7 @@
     // Find all anchors that href to preview.redd.it, i.redd.it, i.imgur.com
     // and contain just a link to the same href
     const expression = /<a href="(http[s]?:\/\/(?:preview\.redd\.it|i\.redd\.it|i\.imgur\.com).*?)">\1?<\/a>/g;
-    const matches = html.matchAll(expression);
+    const matches = Array.from(html.matchAll(expression));
     var result = html;
     matches.forEach((match) => {
       // Replace each occurrence with an actual img tag
