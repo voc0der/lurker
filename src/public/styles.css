@@ -11,9 +11,9 @@
   --link-visited-color: #999;
   --accent: var(--link-color);
   --error-text-color: red;
-  --border-radius-card: 2vmin;
-  --border-radius-media: 1.5vmin;
-  --border-radius-preview: 1vmin;
+  --border-radius-card: 0.5vmin;
+  --border-radius-media: 0.5vmin;
+  --border-radius-preview: 0.3vmin;
 
   font-family: Inter, sans-serif;
   font-feature-settings: 'ss01' 1, 'kern' 1, 'liga' 1, 'cv05' 1, 'dlig' 1, 'ss01' 1, 'ss07' 1, 'ss08' 1;
@@ -203,7 +203,6 @@ nav {
 
 .image-viewer {
   position: relative;
-  margin: 0.9rem;
 }
 
 .image-viewer > img {
@@ -306,22 +305,10 @@ summary::before {
   max-height: 70vh;
 }
 
-.image-viewer.main-content a {
-  margin: unset;
-}
-
 .image-viewer a:has(img) {
   font-size: 0rem;
   padding: unset;
   margin: unset;
-}
-
-.media-preview a,
-.image-viewer a {
-  font-size: 1.5rem;
-  text-decoration: none;
-  padding: unset;
-  margin: 1rem;
 }
 
 .media-maximized {
@@ -363,9 +350,9 @@ form {
 
 @media (min-width: 768px) {
   :root {
-    --border-radius-card: 1vmin;
-    --border-radius-media: 1vmin;
-    --border-radius-preview: 0.5vmin;  
+    --border-radius-card: 0.5vmin;
+    --border-radius-media: 0.5vmin;
+    --border-radius-preview: 0.3vmin;  
   }
   .post, .comments-container, .hero, .header, .footer {
     flex: 1 1 90%;
@@ -380,12 +367,7 @@ form {
   .image-viewer img,
   .image-viewer video
   {
-    max-height: 45vh;
-  }
-  .image-viewer a {
-    font-size: 1rem;
-    margin: 0.7rem;
-    padding: initial;
+    max-height: 50vh;
   }
   .post-text.card {
     max-width: 100%;
@@ -429,16 +411,11 @@ form {
   .image-viewer img,
   .image-viewer video
   {
-    max-height: 35vh;
+    max-height: 45vh;
   }
   .media-preview a {
     font-size: 2rem;
     padding: 2rem;
-  }
-  .image-viewer a {
-    font-size: 1rem;
-    margin: 1rem;
-    padding: initial;
   }
   .self-text.card {
     -webkit-line-clamp: 4;
@@ -824,7 +801,7 @@ select {
 
 .sticky {
   background-color: var(--sticky-color);
-  border-radius: 2px;
+  border-radius: var(--border-radius-card);
   border: 4px solid var(--sticky-color);
 }
 

@@ -33,6 +33,12 @@ html
             | consider donating to&nbsp;
             a(href="https://donate.stripe.com/dR62bTaZH1295Da4gg") oppiliappan
             |, author of lurker
+        if about && !isMulti
+          div.info-container
+            p
+              | #{fmtnum(about.accounts_active)} active
+              | &nbsp;·&nbsp;
+              | #{fmtnum(about.subscribers)} subscribers
         hr
         details.sort-details
           summary.sorting sorting by #{query.sort + (query.t?' '+query.t:'')}

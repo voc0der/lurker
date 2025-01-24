@@ -1,18 +1,17 @@
 mixin header(user)
   - var viewQuery = 'view=' + (query && query.view ? query.view : 'compact')
-  - var sortQuery = 'sort=' + (query ? (query.sort ? query.sort + (query.t ? '&t=' + query.t : '') : 'hot') : 'hot')
   div.header
     div.header-item
-      a(href=`/?${sortQuery}&${viewQuery}`) home
+      a(href=`/?${viewQuery}`) home
     div.header-item
-      a(href=`/r/all?${sortQuery}&${viewQuery}`) all
+      a(href=`/r/all?${viewQuery}`) all
     div.header-item
-      a(href=`/search?${sortQuery}&${viewQuery}`) search
+      a(href=`/search?${viewQuery}`) search
     div.header-item
-      a(href=`/subs?${sortQuery}&${viewQuery}`) subs
+      a(href=`/subs?${viewQuery}`) subs
     if user
       div.header-item
-        a(href=`/dashboard?${sortQuery}&${viewQuery}`) #{user.username}
+        a(href=`/dashboard${viewQuery}`) #{user.username}
         |&nbsp;
         a(href='/logout') (logout)
     else

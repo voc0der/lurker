@@ -1,4 +1,9 @@
-- var fmtnum = (n)=>n>=1000?(n/1000).toFixed(1)+'k':n;
+-
+  function fmtnum(n) {
+    return n >= 1e6 ? (n / 1e6).toFixed(1) + 'mil' :
+         n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' :
+         n;
+  }
 - var fmttxt = (n,t)=>`${t}${n==1?'':'s'}`
 - var stripPrefix = (s, p) => s.startsWith(p) ? s.slice(p.length) : s;
 -
