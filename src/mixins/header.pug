@@ -11,7 +11,7 @@ mixin header(user)
       a(href=`/subs?${viewQuery}`) subs
     if user
       div.header-item
-        a(href=`/dashboard${viewQuery}`) #{user.username}
+        a(href=`/dashboard?${viewQuery}`) #{user.username}
         |&nbsp;
         a(href='/logout') (logout)
     else
