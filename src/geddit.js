@@ -70,7 +70,7 @@ class Geddit {
 				after: data.after,
 				posts: data.children,
 			}))
-			.catch((err) => null);
+			.catch((_) => null);
 	}
 
 	async getDomainNew(domain, options = this.parameters) {
