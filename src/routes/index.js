@@ -6,10 +6,13 @@ const { JWT_KEY } = require("../");
 const { db } = require("../db");
 const { authenticateToken, authenticateAdmin } = require("../auth");
 const { validateInviteToken } = require("../invite");
-const url = require("url");
 
 const router = express.Router();
 const G = new geddit.Geddit();
+
+const commonRenderOptions = {
+	theme: process.env.LURKER_THEME,
+};
 
 // GET /
 router.get("/", authenticateToken, async (req, res) => {
@@ -17,7 +20,7 @@ router.get("/", authenticateToken, async (req, res) => {
 		.query("SELECT * FROM subscriptions WHERE user_id = $id")
 		.all({ id: req.user.id });
 
-	const qs = req.query ? ('?' + new URLSearchParams(req.query).toString()) : '';
+	const qs = req.query ? "?" + new URLSearchParams(req.query).toString() : "";
 
 	if (subs.length === 0) {
 		res.redirect(`/r/all${qs}`);
@@ -53,7 +56,7 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
 
 	const [posts, about] = await Promise.all([postsReq, aboutReq]);
 
-	if (query.view == 'card' && posts && posts.posts) {
+	if (query.view == "card" && posts && posts.posts) {
 		posts.posts.forEach(unescape_selftext);
 	}
 
@@ -66,6 +69,7 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
 		user: req.user,
 		isSubbed,
 		currentUrl: req.url,
+		...commonRenderOptions,
 	});
 });
 
@@ -82,6 +86,7 @@ router.get("/comments/:id", authenticateToken, async (req, res) => {
 		user: req.user,
 		from: req.query.from,
 		query: req.query,
+		...commonRenderOptions,
 	});
 });
 
@@ -103,6 +108,7 @@ router.get(
 			comments,
 			parent_id,
 			user: req.user,
+			...commonRenderOptions,
 		});
 	},
 );
@@ -115,18 +121,27 @@ router.get("/subs", authenticateToken, async (req, res) => {
 		)
 		.all({ id: req.user.id });
 
-	res.render("subs", { subs, user: req.user, query: req.query });
+	res.render("subs", {
+		subs,
+		user: req.user,
+		query: req.query,
+		...commonRenderOptions,
+	});
 });
 
 // GET /search
 router.get("/search", authenticateToken, async (req, res) => {
-	res.render("search", { user: req.user, query: req.query });
+	res.render("search", {
+		user: req.user,
+		query: req.query,
+		...commonRenderOptions,
+	});
 });
 
 // GET /sub-search
 router.get("/sub-search", authenticateToken, async (req, res) => {
 	if (!req.query || !req.query.q) {
-		res.render("sub-search", { user: req.user });
+		res.render("sub-search", { user: req.user, ...commonRenderOptions });
 	} else {
 		const { items, after } = await G.searchSubreddits(req.query.q);
 		const subs = db
@@ -145,6 +160,7 @@ router.get("/sub-search", authenticateToken, async (req, res) => {
 			user: req.user,
 			original_query: req.query.q,
 			query: req.query,
+			...commonRenderOptions,
 		});
 	}
 });
@@ -152,7 +168,7 @@ router.get("/sub-search", authenticateToken, async (req, res) => {
 // GET /post-search
 router.get("/post-search", authenticateToken, async (req, res) => {
 	if (!req.query || !req.query.q) {
-		res.render("post-search", { user: req.user });
+		res.render("post-search", { user: req.user, ...commonRenderOptions });
 	} else {
 		const { items, after } = await G.searchSubmissions(req.query.q);
 		const message =
@@ -160,10 +176,10 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 				? "no results found"
 				: `showing ${items.length} results`;
 
-		if (req.query.view == 'card' && items) {
+		if (req.query.view == "card" && items) {
 			items.forEach(unescape_selftext);
 		}
-	
+
 		res.render("post-search", {
 			items,
 			after,
@@ -172,6 +188,7 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 			original_query: req.query.q,
 			currentUrl: req.url,
 			query: req.query,
+			...commonRenderOptions,
 		});
 	}
 });
@@ -194,7 +211,13 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 				usedAt: Date.parse(inv.usedAt),
 			}));
 	}
-	res.render("dashboard", { invites, isAdmin, user: req.user, query: req.query });
+	res.render("dashboard", {
+		invites,
+		isAdmin,
+		user: req.user,
+		query: req.query,
+		...commonRenderOptions,
+	});
 });
 
 router.get("/create-invite", authenticateAdmin, async (req, res) => {
@@ -233,11 +256,15 @@ router.get("/media/*", authenticateToken, async (req, res) => {
 	const kind = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)
 		? "img"
 		: "video";
-	res.render("media", { kind, url });
+	res.render("media", { kind, url, ...commonRenderOptions });
 });
 
 router.get("/register", validateInviteToken, async (req, res) => {
-	res.render("register", { isDisabled: false, token: req.query.token });
+	res.render("register", {
+		isDisabled: false,
+		token: req.query.token,
+		...commonRenderOptions,
+	});
 });
 
 router.post("/register", validateInviteToken, async (req, res) => {
@@ -253,12 +280,14 @@ router.post("/register", validateInviteToken, async (req, res) => {
 	if (user) {
 		return res.render("register", {
 			message: `user by the name "${username}" exists, choose a different username`,
+			...commonRenderOptions,
 		});
 	}
 
 	if (password !== confirm_password) {
 		return res.render("register", {
 			message: "passwords do not match, try again",
+			...commonRenderOptions,
 		});
 	}
 
@@ -294,6 +323,7 @@ router.post("/register", validateInviteToken, async (req, res) => {
 	} catch (err) {
 		return res.render("register", {
 			message: "error registering user, try again later",
+			...commonRenderOptions,
 		});
 	}
 });
