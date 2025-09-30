@@ -11,9 +11,8 @@ class Geddit {
 			type: "sr,link,user",
 		};
 
-		// ✅ Sent with every fetch below
 		this.headers = {
-			"User-Agent": "chrome_user_agent",
+			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140 Safari/537.36",
 		};
 	}
 
