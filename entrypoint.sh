@@ -16,6 +16,6 @@ fi
 # Change ownership of the application directory
 chown -R ${PUID}:${PGID} /data /home/bun/app
 
-# Switch to the new user, cd to app directory, and execute the command
-cd /home/bun/app
-exec gosu ${PUID}:${PGID} "$@"
+# Switch to the new user and run command in the app directory
+# Using sh -c to ensure the cd happens after user switch
+exec gosu ${PUID}:${PGID} sh -c "cd /home/bun/app && exec \"\$@\"" -- "$@"
