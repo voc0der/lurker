@@ -1,10 +1,10 @@
 FROM oven/bun:latest
 
-# Set working directory for app files
-WORKDIR /home/bun/app
+# Copy application files (default WORKDIR in oven/bun is /home/bun/app)
+ADD ./ ./
 
-# Copy application files
-COPY ./ ./
+# Install dependencies
+RUN bun install
 
 # Create a directory for data
 RUN mkdir -p /data
@@ -17,14 +17,15 @@ ENV PGID=1000
 RUN apt-get update && apt-get install -y gosu && rm -rf /var/lib/apt/lists/*
 
 # Add entrypoint script for handling dynamic PUID/PGID
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+ADD entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Set working directory for runtime
-WORKDIR /data
+# Keep working directory as /home/bun/app so bun can find modules
+# The entrypoint will cd to /data if needed
+WORKDIR /home/bun/app
 
 # Set the entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Default command
-CMD ["bun", "run", "/home/bun/app/src/index.js"]
+CMD ["bun", "run", "src/index.js"]
