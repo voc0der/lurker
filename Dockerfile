@@ -1,7 +1,10 @@
 FROM oven/bun:latest
 
+# Set working directory for app files
+WORKDIR /home/bun/app
+
 # Copy application files
-ADD ./ ./
+COPY ./ ./
 
 # Create a directory for data
 RUN mkdir -p /data
@@ -17,7 +20,7 @@ RUN apt-get update && apt-get install -y gosu && rm -rf /var/lib/apt/lists/*
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Set working directory
+# Set working directory for runtime
 WORKDIR /data
 
 # Set the entrypoint
