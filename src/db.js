@@ -1,5 +1,9 @@
 const { Database } = require("bun:sqlite");
-const db = new Database("lurker.db", {
+const path = require("path");
+
+// Use /data directory for database (where volume is mounted)
+const dbPath = path.join("/data", "lurker.db");
+const db = new Database(dbPath, {
 	strict: true,
 });
 
