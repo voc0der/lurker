@@ -17,5 +17,5 @@ fi
 chown -R ${PUID}:${PGID} /data /home/bun/app
 
 # Switch to the new user and run command in the app directory
-# Using sh -c to ensure the cd happens after user switch
-exec gosu ${PUID}:${PGID} sh -c "cd /home/bun/app && exec \"\$@\"" -- "$@"
+# Using bash -c with proper argument passing
+exec gosu ${PUID}:${PGID} bash -c 'cd /home/bun/app && exec "$@"' bash "$@"
