@@ -11,7 +11,7 @@ better than old-reddit because:
 - no account necessary for over-18 content
 
 i host a version for myself and a few friends. reach out to
-me if you would like an invite. 
+me if you would like an invite.
 
 ### features
 
@@ -89,7 +89,7 @@ services:
 or with just [bun](https://bun.sh/):
 
 ```bash
-bun run src/index.js 
+bun run src/index.js
 ```
 
 ### usage
@@ -100,6 +100,11 @@ account will be an admin account. you can click on your
 username at the top-right to view the dashboard and to
 invite other users to your instance. copy the link and send
 it to your friends!
+
+### environment variables
+
+- `LURKER_PORT`: port to listen on, defaults to `3000`.
+- `LURKER_THEME`: name of CSS theme file. The file must be present in `src/public`.
 
 ### technical
 

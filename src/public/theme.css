@@ -1,0 +1,36 @@
+/*
+Uncomment and modify the values in this file to change the theme of the app.
+
+:root {
+	--bg-color: white;
+	--bg-color-muted: #eee;
+	--text-color: black;
+	--text-color-muted: #999;
+	--blockquote-color: green;
+	--sticky-color: #dcfeda;
+	--gilded: darkorange;
+	--link-color: #29bc9b;
+	--link-visited-color: #999;
+	--accent: var(--link-color);
+	--error-text-color: red;
+	--border-radius-card: 0.5vmin;
+	--border-radius-media: 0.5vmin;
+	--border-radius-preview: 0.3vmin;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg-color: black;
+		--bg-color-muted: #333;
+		--text-color: white;
+		--text-color-muted: #999;
+		--blockquote-color: lightgreen;
+		--sticky-color: #014413;
+		--gilded: gold;
+		--link-color: #79ffe1;
+		--link-visited-color: #999;
+		--accent: var(--link-color);
+		--error-text-color: lightcoral;
+	}
+}
+*/

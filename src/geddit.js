@@ -10,7 +10,6 @@ class Geddit {
 			include_over_18: true,
 			type: "sr,link,user",
 		};
-
 		this.headers = {
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140 Safari/537.36",
 		};
@@ -145,12 +144,9 @@ class Geddit {
 		})
 			.then((res) => res.json())
 			.then((json) => json.data)
-			// NOTE: kept your structure; this next then is likely incorrect in original code.
-			.then({
-				data: {
-					users: data.children,
-				},
-			})
+			.then((data) => ({
+				users: data.children,
+			}))
 			.catch((err) => null);
 	}
 
