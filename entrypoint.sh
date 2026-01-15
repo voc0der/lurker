@@ -16,5 +16,6 @@ fi
 # Change ownership of the application directory
 chown -R ${PUID}:${PGID} /data /home/bun/app
 
-# Switch to the new user and execute the command
+# Switch to the new user, cd to app directory, and execute the command
+cd /home/bun/app
 exec gosu ${PUID}:${PGID} "$@"
