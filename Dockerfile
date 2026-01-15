@@ -9,6 +9,9 @@ RUN bun install
 # Create a directory for data
 RUN mkdir -p /data
 
+# Ensure /home/bun has proper permissions for traversal
+RUN chmod 755 /home/bun
+
 # Set default PUID and PGID
 ENV PUID=1000
 ENV PGID=1000
