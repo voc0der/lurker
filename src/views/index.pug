@@ -71,9 +71,9 @@ html
 
       if posts && posts.after
         if user.infiniteScroll
-          div.page-divider(style="text-align: center; padding: 20px; opacity: 0.5;") ─────
-          div#infinite-scroll-sentinel(style="height: 1px;")
-          div#loading-indicator(style="text-align: center; padding: 20px; display: none;") Loading more posts...
+          div.page-divider ─────
+          div#infinite-scroll-sentinel
+          div#loading-indicator Loading more posts...
         else
           div.footer
             div.footer-item
@@ -114,7 +114,6 @@ html
                     // Add divider before new content
                     const divider = document.createElement('div');
                     divider.className = 'page-divider';
-                    divider.style.cssText = 'text-align: center; padding: 20px; opacity: 0.5;';
                     divider.textContent = '─────';
                     postsContainer.insertAdjacentElement('beforeend', divider);
 

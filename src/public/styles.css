@@ -808,3 +808,28 @@ select {
 .inline {
   max-width: 100%;
 }
+
+.page-divider {
+  text-align: center;
+  padding: 20px;
+  opacity: 0.5;
+  color: var(--text-color-muted);
+}
+
+#infinite-scroll-sentinel {
+  height: 1px;
+}
+
+#loading-indicator {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-color-muted);
+  display: none;
+}
+
+#posts-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
