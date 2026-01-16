@@ -150,6 +150,43 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
 	});
 });
 
+// API endpoint to fetch more posts for infinite scroll
+router.get("/api/r/:subreddit/posts", authenticateToken, async (req, res) => {
+	const subreddit = req.params.subreddit;
+	const query = req.query ? req.query : {};
+	if (!query.sort) {
+		query.sort = "hot";
+	}
+	if (!query.view) {
+		query.view = "compact";
+	}
+
+	const posts = await G.getSubmissions(query.sort, subreddit, query);
+
+	if (query.view == "card" && posts && posts.posts) {
+		posts.posts.forEach(unescape_selftext);
+	}
+
+	// Render posts as HTML partial
+	const html = await new Promise((resolve, reject) => {
+		res.render("posts-partial", {
+			posts: posts ? posts.posts : [],
+			query,
+			currentUrl: req.query.currentUrl || req.originalUrl,
+			...commonRenderOptions,
+		}, (err, html) => {
+			if (err) reject(err);
+			else resolve(html);
+		});
+	});
+
+	// Return JSON with HTML and after cursor
+	res.json({
+		html,
+		after: posts ? posts.after : null,
+	});
+});
+
 // GET /comments/:id
 router.get("/comments/:id", authenticateToken, async (req, res) => {
 	const id = req.params.id;
@@ -295,6 +332,23 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 		query: req.query,
 		...commonRenderOptions,
 	});
+});
+
+// POST /update-preferences
+router.post("/update-preferences", authenticateToken, async (req, res) => {
+	const { infiniteScroll } = req.body;
+	const infiniteScrollValue = infiniteScroll === "on" ? 1 : 0;
+
+	try {
+		db.query("UPDATE users SET infiniteScroll = $infiniteScroll WHERE id = $id").run({
+			infiniteScroll: infiniteScrollValue,
+			id: req.user.id,
+		});
+		return res.redirect("/dashboard");
+	} catch (err) {
+		console.error("Error updating preferences:", err);
+		return res.redirect("/dashboard?message=Failed to update preferences");
+	}
 });
 
 router.get("/create-invite", authenticateAdmin, async (req, res) => {

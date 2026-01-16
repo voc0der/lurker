@@ -64,12 +64,83 @@ html
             div
               a(href=`/r/${subreddit}?sort=${sortQuery}&view=card`) card
 
-      if posts
-        each child in posts.posts
-          +post(child.data, currentUrl)
+      div#posts-container
+        if posts
+          each child in posts.posts
+            +post(child.data, currentUrl)
 
-        if posts.after
+      if posts && posts.after
+        if user.infiniteScroll
+          div.page-divider(style="text-align: center; padding: 20px; opacity: 0.5;") ─────
+          div#infinite-scroll-sentinel(style="height: 1px;")
+          div#loading-indicator(style="text-align: center; padding: 20px; display: none;") Loading more posts...
+        else
           div.footer
             div.footer-item
               - var newQuery = {...query, after: posts.after}
               a(href=`/r/${subreddit}?${encodeQueryParams(newQuery)}`) next ⟶
+
+      if user.infiniteScroll && posts && posts.after
+        script.
+          (function() {
+            let isLoading = false;
+            let afterCursor = '#{posts.after}';
+            const subreddit = '#{subreddit}';
+            const sort = '#{query.sort}';
+            const view = '#{query.view}';
+            const currentUrl = '#{currentUrl}';
+
+            const sentinel = document.getElementById('infinite-scroll-sentinel');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const postsContainer = document.getElementById('posts-container');
+
+            const observer = new IntersectionObserver(async (entries) => {
+              if (entries[0].isIntersecting && !isLoading && afterCursor) {
+                isLoading = true;
+                loadingIndicator.style.display = 'block';
+
+                try {
+                  const params = new URLSearchParams({
+                    sort: sort,
+                    view: view,
+                    after: afterCursor,
+                    currentUrl: currentUrl
+                  });
+
+                  const response = await fetch(`/api/r/${subreddit}/posts?${params}`);
+                  const data = await response.json();
+
+                  if (data.html) {
+                    // Add divider before new content
+                    const divider = document.createElement('div');
+                    divider.className = 'page-divider';
+                    divider.style.cssText = 'text-align: center; padding: 20px; opacity: 0.5;';
+                    divider.textContent = '─────';
+                    postsContainer.insertAdjacentElement('beforeend', divider);
+
+                    // Add new posts
+                    postsContainer.insertAdjacentHTML('beforeend', data.html);
+                  }
+
+                  afterCursor = data.after;
+
+                  if (!afterCursor) {
+                    observer.disconnect();
+                    sentinel.remove();
+                    loadingIndicator.textContent = 'No more posts';
+                    loadingIndicator.style.display = 'block';
+                  }
+                } catch (error) {
+                  console.error('Error loading more posts:', error);
+                  loadingIndicator.textContent = 'Error loading posts';
+                } finally {
+                  loadingIndicator.style.display = 'none';
+                  isLoading = false;
+                }
+              }
+            }, { threshold: 0.1 });
+
+            if (sentinel) {
+              observer.observe(sentinel);
+            }
+          })();

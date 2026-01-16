@@ -11,9 +11,17 @@ html
       div.hero
         h1 dashboard
 
-        if message 
+        if message
           div.dashboard-error-message
             | #{message}
+
+        h2 preferences
+        form(action="/update-preferences" method="POST")
+          div
+            label
+              input(type="checkbox" name="infiniteScroll" checked=user.infiniteScroll)
+              | &nbsp;Enable Never Ending Reddit (infinite scroll)
+          button(type="submit") Save Preferences
 
         if isAdmin
           h2 invites

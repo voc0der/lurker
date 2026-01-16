@@ -69,4 +69,11 @@ runMigration("add-isAdmin-column", () => {
   `).run();
 });
 
+runMigration("add-infinite-scroll-column", () => {
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN infiniteScroll INTEGER DEFAULT 0
+  `).run();
+});
+
 module.exports = { db };
