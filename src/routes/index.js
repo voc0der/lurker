@@ -500,6 +500,10 @@ function unescape_selftext(post) {
 	if (post.selftext_html) {
 		post.selftext_html = he.decode(post.selftext_html);
 	}
+	// Also unescape crosspost parent selftext if present
+	if (post.crosspost_parent_list && post.crosspost_parent_list.length > 0) {
+		unescape_selftext(post.crosspost_parent_list[0]);
+	}
 }
 
 function unescape_comment(comment) {

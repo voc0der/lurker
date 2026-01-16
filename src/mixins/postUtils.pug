@@ -1,19 +1,30 @@
 -
+  function getPostData(p) {
+    if (p.crosspost_parent_list && p.crosspost_parent_list.length > 0) {
+      return p.crosspost_parent_list[0];
+    }
+    return p;
+  }
+-
   function isPostMedia(p) {
+    p = getPostData(p);
     return isPostImage(p) || isPostGallery(p) || isPostVideo(p);
   }
 -
   function isPostGallery(p) {
+    p = getPostData(p);
     return (p.is_gallery && p.is_gallery == true);
   }
 -
   function isPostImage(p) {
+    p = getPostData(p);
     const imgRe = /\.(png|jpg|jpeg|gif|webp|bmp|tiff|svg)$/i;
     return (p.post_hint == "image" && p.thumbnail && p.thumbnail != "self" && p.thumbnail != "default")
       || imgRe.test(p.url);
   }
 -
   function postThumbnail(p) {
+    p = getPostData(p);
     if (p.over_18) {
       return "/nsfw.svg";
     } else if (p.thumbnail == "spoiler") {
@@ -26,14 +37,17 @@
   }
 -
   function isPostVideo(p) {
+    p = getPostData(p);
     return (p.post_hint == "hosted:video");
   }
 -
   function isPostLink(p) {
+    p = getPostData(p);
     return (p.post_hint == "link");
   }
 -
   function imgExt(p, id) {
+    p = getPostData(p);
     var metadata = p.media_metadata;
     if (metadata[id].status == 'valid') {
       return stripPrefix(metadata[id].m, "image/");
@@ -44,6 +58,7 @@
   }
 -
   function postGalleryItems(p) {
+    p = getPostData(p);
     if (p.gallery_data && p.gallery_data.items) {
       return p.gallery_data.items.map((item, idx) => ({
         id: item.media_id,
@@ -71,6 +86,7 @@
   }
 -
   function decodePostVideoUrls(p) {
+    p = getPostData(p);
     // Video URLs have querystring separators that are HTML-encoded, so replace them.
     const expression = /&amp;/g;
 
