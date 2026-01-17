@@ -341,13 +341,32 @@ router.post("/update-preferences", authenticateToken, async (req, res) => {
 	const useClassicLayoutValue = useClassicLayout === "on" ? 1 : 0;
 	const themeValue = themePreference || 'auto';
 
+	console.log("Received preferences:", {
+		infiniteScroll,
+		useClassicLayout,
+		themePreference,
+		computed: {
+			infiniteScrollValue,
+			useClassicLayoutValue,
+			themeValue,
+		},
+		userId: req.user.id
+	});
+
 	try {
-		db.query("UPDATE users SET infiniteScroll = $infiniteScroll, useClassicLayout = $useClassicLayout, themePreference = $themePreference WHERE id = $id").run({
+		const result = db.query("UPDATE users SET infiniteScroll = $infiniteScroll, useClassicLayout = $useClassicLayout, themePreference = $themePreference WHERE id = $id").run({
 			infiniteScroll: infiniteScrollValue,
 			useClassicLayout: useClassicLayoutValue,
 			themePreference: themeValue,
 			id: req.user.id,
 		});
+
+		console.log("Update result:", result);
+
+		// Verify the update
+		const updatedUser = db.query("SELECT infiniteScroll, useClassicLayout, themePreference FROM users WHERE id = $id").get({ id: req.user.id });
+		console.log("User after update:", updatedUser);
+
 		return res.redirect("/dashboard");
 	} catch (err) {
 		console.error("Error updating preferences:", err);
