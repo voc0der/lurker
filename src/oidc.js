@@ -110,9 +110,15 @@ async function initializeOIDC({ jwtKey } = {}) {
   try {
     if (!_openid) {
       _openid = await import('openid-client');
+      logger.debug('openid-client imported, available exports:', Object.keys(_openid));
     }
 
-    const { Issuer } = _openid;
+    // In Bun, ES module imports from CommonJS have exports directly on the namespace
+    const Issuer = _openid.Issuer || _openid.default?.Issuer;
+    if (!Issuer) {
+      throw new Error('Could not find Issuer export from openid-client. Available exports: ' + Object.keys(_openid).join(', '));
+    }
+
     _issuer = await Issuer.discover(issuerUrl);
 
     // openid-client v5/v6 compatible client construction
@@ -180,7 +186,10 @@ function getAuthorizationUrl({ redirectAfterLogin } = {}) {
   const scope = _getRequiredEnv('OIDC_SCOPE') || 'openid profile email';
   const redirectUri = _getRequiredEnv('OIDC_REDIRECT_URI');
 
-  const { generators } = _openid;
+  const generators = _openid.generators || _openid.default?.generators;
+  if (!generators) {
+    throw new Error('Could not find generators export from openid-client');
+  }
 
   const state = generators.state();
   const nonce = generators.nonce();
