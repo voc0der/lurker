@@ -10,6 +10,7 @@ let _openid = null;
 let _clientId = null;
 let _clientSecret = null;
 let _redirectUri = null;
+let _clientAuth = null; // Client authentication method
 
 function _boolEnv(name, defaultValue = false) {
   const v = process.env[name];
@@ -121,6 +122,35 @@ async function initializeOIDC({ jwtKey } = {}) {
     }
 
     _config = await discovery(new URL(issuerUrl), _clientId, _clientSecret);
+
+    // Determine client authentication method
+    // Default to client_secret_post (configure IDP to support this method)
+    const authMethod = process.env.OIDC_CLIENT_AUTH_METHOD || 'client_secret_post';
+
+    switch (authMethod.toLowerCase()) {
+      case 'client_secret_post':
+        _clientAuth = _openid.ClientSecretPost || _openid.default?.ClientSecretPost;
+        break;
+      case 'client_secret_jwt':
+        _clientAuth = _openid.ClientSecretJwt || _openid.default?.ClientSecretJwt;
+        break;
+      case 'private_key_jwt':
+        _clientAuth = _openid.PrivateKeyJwt || _openid.default?.PrivateKeyJwt;
+        break;
+      case 'none':
+        _clientAuth = _openid.None || _openid.default?.None;
+        break;
+      case 'client_secret_basic':
+      default:
+        _clientAuth = _openid.ClientSecretBasic || _openid.default?.ClientSecretBasic;
+        break;
+    }
+
+    if (!_clientAuth) {
+      throw new Error(`Could not find client auth method: ${authMethod}`);
+    }
+
+    logger.debug(`Using OIDC client authentication method: ${authMethod}`);
 
     _encryptionKey = _deriveEncryptionKey(jwtKey);
 
@@ -239,7 +269,7 @@ async function handleCallback(req, { state, nonce, code_verifier } = {}) {
     pkceCodeVerifier: code_verifier,
     expectedState: state,
     expectedNonce: nonce,
-  });
+  }, _clientAuth);
 
   // Extract claims from ID token
   const claims = tokenSet.claims || {};
@@ -315,7 +345,7 @@ async function refreshAccessToken(userId) {
 
   let tokenSet;
   try {
-    tokenSet = await refreshTokenGrant(_config, refreshToken);
+    tokenSet = await refreshTokenGrant(_config, refreshToken, _clientAuth);
   } catch (err) {
     logger.error('OIDC token refresh failed.', err);
     return false;
