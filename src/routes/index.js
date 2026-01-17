@@ -336,12 +336,16 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
 // POST /update-preferences
 router.post("/update-preferences", authenticateToken, async (req, res) => {
-	const { infiniteScroll } = req.body;
+	const { infiniteScroll, useClassicLayout, themePreference } = req.body;
 	const infiniteScrollValue = infiniteScroll === "on" ? 1 : 0;
+	const useClassicLayoutValue = useClassicLayout === "on" ? 1 : 0;
+	const themeValue = themePreference || 'auto';
 
 	try {
-		db.query("UPDATE users SET infiniteScroll = $infiniteScroll WHERE id = $id").run({
+		db.query("UPDATE users SET infiniteScroll = $infiniteScroll, useClassicLayout = $useClassicLayout, themePreference = $themePreference WHERE id = $id").run({
 			infiniteScroll: infiniteScrollValue,
+			useClassicLayout: useClassicLayoutValue,
+			themePreference: themeValue,
 			id: req.user.id,
 		});
 		return res.redirect("/dashboard");

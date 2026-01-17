@@ -6,7 +6,7 @@ include ../utils
 doctype html
 html
   +head("more comments")
-  body
+  body(data-theme=user.themePreference data-classic-layout=user.useClassicLayout)
     main#content
       +header()
       div.comments-container

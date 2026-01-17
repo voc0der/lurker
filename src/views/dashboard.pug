@@ -5,7 +5,7 @@ include ../utils
 doctype html
 html
   +head("dashboard")
-  body
+  body(data-theme=user.themePreference data-classic-layout=user.useClassicLayout)
     main#content
       +header(user)
       div.hero
@@ -21,7 +21,21 @@ html
             label
               input(type="checkbox" name="infiniteScroll" checked=user.infiniteScroll)
               | &nbsp;Enable Never Ending Reddit (infinite scroll)
-          button(type="submit") Save Preferences
+
+          div(style="margin-top: 15px;")
+            label
+              input(type="checkbox" name="useClassicLayout" checked=user.useClassicLayout)
+              | &nbsp;Use Classic RES-style Layout (desktop)
+
+          div(style="margin-top: 15px;")
+            label(style="display: block; margin-bottom: 5px;") Theme Preference:
+            select(name="themePreference" style="padding: 5px; background-color: var(--bg-color-muted); color: var(--text-color); border: 1px solid var(--text-color-muted); border-radius: 4px;")
+              option(value="auto" selected=(user.themePreference === 'auto')) Auto (system preference)
+              option(value="light" selected=(user.themePreference === 'light')) Light
+              option(value="dark" selected=(user.themePreference === 'dark')) Dark
+              option(value="res" selected=(user.themePreference === 'res')) RES Night Mode
+
+          button(type="submit" style="margin-top: 20px;") Save Preferences
 
         if isAdmin
           h2 invites

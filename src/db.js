@@ -76,4 +76,18 @@ runMigration("add-infinite-scroll-column", () => {
   `).run();
 });
 
+runMigration("add-theme-preference-column", () => {
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN themePreference TEXT DEFAULT 'auto'
+  `).run();
+});
+
+runMigration("add-classic-layout-column", () => {
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN useClassicLayout INTEGER DEFAULT 0
+  `).run();
+});
+
 module.exports = { db };
