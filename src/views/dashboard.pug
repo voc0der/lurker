@@ -19,12 +19,12 @@ html
         form(action="/update-preferences" method="POST" autocomplete="off")
           div
             label(for="pref-infinite-scroll")
-              input(type="checkbox" id="pref-infinite-scroll" name="infiniteScroll" value="1" checked=user.infiniteScroll)
+              input(type="checkbox" id="pref-infinite-scroll" name="infiniteScroll" value="1" checked=(user.infiniteScroll === 1))
               | &nbsp;Enable Never Ending Reddit (infinite scroll)
 
           div(style="margin-top: 15px;")
             label(for="pref-classic-layout")
-              input(type="checkbox" id="pref-classic-layout" name="useClassicLayout" value="1" checked=user.useClassicLayout)
+              input(type="checkbox" id="pref-classic-layout" name="useClassicLayout" value="1" checked=(user.useClassicLayout === 1))
               | &nbsp;Use Classic RES-style Layout (desktop)
 
           div(style="margin-top: 15px;")

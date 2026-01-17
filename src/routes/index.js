@@ -7,6 +7,7 @@ const { JWT_KEY } = require("../");
 const { db } = require("../db");
 const { authenticateToken, authenticateAdmin } = require("../auth");
 const { validateInviteToken } = require("../invite");
+const logger = require("../logger");
 
 const router = express.Router();
 const G = new geddit.Geddit();
@@ -34,7 +35,7 @@ async function loginViaHeaders(req, res, next) {
 
   // We need env.REMOTE_HEADER_LOGIN=true to use SSO. Also check if remoteUser header is missing
   if (!(process.env.REMOTE_HEADER_LOGIN || false) || !remoteUser) {
-    if(process.env.REMOTE_HEADER_LOGIN) console.log("Remote user header missing");
+    if(process.env.REMOTE_HEADER_LOGIN) logger.debug("Remote user header missing");
     return res.redirect("/login");  // Redirect to login page if missing
   }
 
@@ -68,7 +69,7 @@ async function loginViaHeaders(req, res, next) {
       const redirectTo = req.query.direct || '/';
       return res.redirect(redirectTo);
     } catch (error) {
-      console.error("Error creating user from headers:", error);
+      logger.error("Error creating user from headers:", error);
       return res.render("login", { message: "Error creating account, please try again." });
     }
   } else {
@@ -309,7 +310,7 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 
 // GET /dashboard
 router.get("/dashboard", authenticateToken, async (req, res) => {
-	console.log("Dashboard - req.user from authenticateToken:", req.user);
+	logger.debug("Dashboard - req.user from authenticateToken:", req.user);
 
 	let invites = null;
 	const isAdmin = db
@@ -328,7 +329,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 			}));
 	}
 
-	console.log("Dashboard - rendering with user:", {
+	logger.debug("Dashboard - rendering with user:", {
 		infiniteScroll: req.user.infiniteScroll,
 		useClassicLayout: req.user.useClassicLayout,
 		themePreference: req.user.themePreference
@@ -351,7 +352,7 @@ router.post("/update-preferences", authenticateToken, async (req, res) => {
 	const useClassicLayoutValue = useClassicLayout === "1" ? 1 : 0;
 	const themeValue = themePreference || 'auto';
 
-	console.log("Received preferences:", {
+	logger.debug("Received preferences:", {
 		infiniteScroll,
 		useClassicLayout,
 		themePreference,
@@ -371,15 +372,15 @@ router.post("/update-preferences", authenticateToken, async (req, res) => {
 			id: req.user.id,
 		});
 
-		console.log("Update result:", result);
+		logger.debug("Update result:", result);
 
 		// Verify the update
 		const updatedUser = db.query("SELECT infiniteScroll, useClassicLayout, themePreference FROM users WHERE id = $id").get({ id: req.user.id });
-		console.log("User after update:", updatedUser);
+		logger.debug("User after update:", updatedUser);
 
 		return res.redirect("/dashboard");
 	} catch (err) {
-		console.error("Error updating preferences:", err);
+		logger.error("Error updating preferences:", err);
 		return res.redirect("/dashboard?message=Failed to update preferences");
 	}
 });
@@ -399,7 +400,7 @@ router.get("/create-invite", authenticateAdmin, async (req, res) => {
 		createInvite();
 		return res.redirect("/dashboard");
 	} catch (err) {
-		console.log(err);
+		logger.error(err);
 		return res.send("failed to create invite");
 	}
 });
@@ -514,7 +515,7 @@ router.post("/login", async (req, res) => {
       const redirectTo = req.query.direct || '/';
       return res.redirect(redirectTo);
     } catch (error) {
-      console.error("Error signing JWT:", error);
+      logger.error("Error signing JWT:", error);
       res.render("login", { message: "Something went wrong, try again later." });
     }
   } else {

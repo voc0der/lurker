@@ -4,6 +4,7 @@ const path = require("node:path");
 const cookieParser = require("cookie-parser");
 const https = require("https");
 const fs = require("fs");
+const logger = require("./logger");
 const app = express();
 const hasher = new Bun.CryptoHasher("sha256", "secret-key");
 const JWT_KEY = process.env.JWT_SECRET_KEY || hasher.update(Math.random().toString()).digest("hex");
@@ -27,7 +28,7 @@ if ((process.env.REMOTE_HEADER_LOGIN || false)) {
         const trustProxyRanges = trustedProxyIPs.join(",");
         app.set('trust proxy', trustProxyRanges);
     } else {
-        console.warn('No valid IPs in REVERSE_PROXY_WHITELIST. Falling back to trust proxy: 1.');
+        logger.warn('No valid IPs in REVERSE_PROXY_WHITELIST. Falling back to trust proxy: 1.');
         app.set('trust proxy', 1);
     }
 }
@@ -50,23 +51,23 @@ if (sslCertPath && sslKeyPath) {
         const sslCert = fs.readFileSync(sslCertPath, "utf8");
         const sslKey = fs.readFileSync(sslKeyPath, "utf8");
 
-        const httpsServer = https.createServer({ 
+        const httpsServer = https.createServer({
             key: sslKey,
             cert: sslCert
         }, app);
 
         const port = process.env.LURKER_PORT || 3000;
         httpsServer.listen(port, httpBinding, () => {
-            console.log(`HTTPS server started on port ${port}`);
+            logger.info(`HTTPS server started on port ${port}`);
         });
     } catch (err) {
-        console.error("Failed to load SSL certificate or key:", err.message);
+        logger.error("Failed to load SSL certificate or key:", err.message);
         process.exit(1);
     }
 } else {
-    console.warn("SSL_CERT_PATH or SSL_KEY_PATH not provided. Falling back to HTTP.");
+    logger.warn("SSL_CERT_PATH or SSL_KEY_PATH not provided. Falling back to HTTP.");
     const port = process.env.LURKER_PORT || 3000;
     const server = app.listen(port, httpBinding, () => {
-        console.log(`HTTP server started on port ${server.address().port}`);
+        logger.info(`HTTP server started on port ${server.address().port}`);
     });
 }
