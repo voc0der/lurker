@@ -540,6 +540,12 @@ router.get("/auth/oidc/callback", async (req, res) => {
   const code_verifier = req.cookies?.oidc_verifier;
   const redirectAfterLogin = req.cookies?.oidc_redirect || "/";
 
+  logger.debug('OIDC callback received - cookies:', {
+    state: state?.substring(0, 10) + '...',
+    nonce: nonce?.substring(0, 10) + '...',
+    code_verifier: code_verifier?.substring(0, 10) + '...',
+  });
+
   // Clear transient cookies regardless
   res.clearCookie("oidc_state", { path: "/auth/oidc" });
   res.clearCookie("oidc_nonce", { path: "/auth/oidc" });
@@ -548,6 +554,7 @@ router.get("/auth/oidc/callback", async (req, res) => {
 
   try {
     if (!state || !nonce || !code_verifier) {
+      logger.warn('OIDC callback missing cookies - state:', !!state, 'nonce:', !!nonce, 'code_verifier:', !!code_verifier);
       return res.redirect("/login?bypass_oidc=true&message=OIDC session expired, try again");
     }
 
