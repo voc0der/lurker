@@ -1,8 +1,24 @@
 mixin head(title)
   head
-    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover")
     meta(charset='UTF-8')
     title #{`${title} · lurker `}
+
+    //- PWA Support
+    link(rel="manifest" href="/manifest.json")
+    meta(name="theme-color" content="#29BC9B")
+    meta(name="mobile-web-app-capable" content="yes")
+    meta(name="application-name" content="Lurker")
+
+    //- Apple iOS PWA Support
+    meta(name="apple-mobile-web-app-capable" content="yes")
+    meta(name="apple-mobile-web-app-status-bar-style" content="black-translucent")
+    meta(name="apple-mobile-web-app-title" content="Lurker")
+    link(rel="apple-touch-icon" href="/icon-180.png")
+    link(rel="apple-touch-icon" sizes="152x152" href="/icon-152.png")
+    link(rel="apple-touch-icon" sizes="180x180" href="/icon-180.png")
+
+    //- Styles
     link(rel="stylesheet", href="/styles.css")
     if theme
       link(rel="stylesheet", href=`/${theme}.css`)

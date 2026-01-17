@@ -567,6 +567,89 @@ router.post("/unsubscribe", authenticateToken, async (req, res) => {
 	}
 });
 
+// PWA Support Routes
+const { generateIcon } = require("../utils/iconGenerator");
+
+// Serve app icons for PWA
+router.get("/icon-:size.png", (req, res) => {
+	const size = parseInt(req.params.size);
+	const validSizes = [72, 96, 128, 144, 152, 180, 192, 384, 512];
+
+	if (!validSizes.includes(size)) {
+		return res.status(404).send("Invalid icon size");
+	}
+
+	const svg = generateIcon(size);
+
+	// For now, serve as SVG (browsers will handle it)
+	// In production, you might want to convert to PNG
+	res.setHeader('Content-Type', 'image/svg+xml');
+	res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+	res.send(svg);
+});
+
+// Serve web app manifest
+router.get("/manifest.json", (_req, res) => {
+	const manifest = {
+		name: "Lurker",
+		short_name: "Lurker",
+		description: "A private, minimal Reddit client",
+		start_url: "/",
+		display: "standalone",
+		background_color: "#ffffff",
+		theme_color: "#29BC9B",
+		orientation: "portrait-primary",
+		icons: [
+			{
+				src: "/icon-72.png",
+				sizes: "72x72",
+				type: "image/svg+xml"
+			},
+			{
+				src: "/icon-96.png",
+				sizes: "96x96",
+				type: "image/svg+xml"
+			},
+			{
+				src: "/icon-128.png",
+				sizes: "128x128",
+				type: "image/svg+xml"
+			},
+			{
+				src: "/icon-144.png",
+				sizes: "144x144",
+				type: "image/svg+xml"
+			},
+			{
+				src: "/icon-152.png",
+				sizes: "152x152",
+				type: "image/svg+xml"
+			},
+			{
+				src: "/icon-192.png",
+				sizes: "192x192",
+				type: "image/svg+xml",
+				purpose: "any maskable"
+			},
+			{
+				src: "/icon-384.png",
+				sizes: "384x384",
+				type: "image/svg+xml"
+			},
+			{
+				src: "/icon-512.png",
+				sizes: "512x512",
+				type: "image/svg+xml",
+				purpose: "any maskable"
+			}
+		]
+	};
+
+	res.setHeader('Content-Type', 'application/json');
+	res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+	res.json(manifest);
+});
+
 module.exports = router;
 
 function unescape_submission(response) {
