@@ -222,6 +222,10 @@ function getAuthorizationUrl({ redirectAfterLogin } = {}) {
   const code_verifier = randomPKCECodeVerifier();
   const code_challenge = calculatePKCECodeChallenge(code_verifier);
 
+  logger.debug('OIDC login - code_verifier:', code_verifier.substring(0, 10) + '...');
+  logger.debug('OIDC login - code_challenge:', code_challenge.substring(0, 10) + '...');
+  logger.debug('OIDC login - state:', state.substring(0, 10) + '...');
+
   // Use v6 buildAuthorizationUrl
   const buildAuthorizationUrl = _openid.buildAuthorizationUrl || _openid.default?.buildAuthorizationUrl;
   if (!buildAuthorizationUrl) {
@@ -265,6 +269,11 @@ async function handleCallback(req, { state, nonce, code_verifier } = {}) {
   }
 
   // Exchange code for tokens using v6 API
+  logger.debug('OIDC callback - code_verifier:', code_verifier?.substring(0, 10) + '...');
+  logger.debug('OIDC callback - state:', state?.substring(0, 10) + '...');
+  logger.debug('OIDC callback - nonce:', nonce?.substring(0, 10) + '...');
+  logger.debug('OIDC callback - callbackUrl:', callbackUrl.href);
+
   const tokenSet = await authorizationCodeGrant(_config, callbackUrl, {
     pkceCodeVerifier: code_verifier,
     expectedState: state,
