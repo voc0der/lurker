@@ -222,11 +222,10 @@ async function getAuthorizationUrl({ redirectAfterLogin } = {}) {
   const code_verifier = randomPKCECodeVerifier();
   const code_challenge = await calculatePKCECodeChallenge(code_verifier);
 
-  // Log at INFO level to ensure visibility
-  logger.info('[OIDC] Starting authorization flow');
-  logger.info(`[OIDC] code_verifier type: ${typeof code_verifier}, length: ${String(code_verifier).length}`);
-  logger.info(`[OIDC] code_challenge type: ${typeof code_challenge}, value: ${String(code_challenge)}`);
-  logger.info(`[OIDC] code_verifier (first 20): ${String(code_verifier).substring(0, 20)}...`);
+  logger.debug('[OIDC] Starting authorization flow');
+  logger.debug(`[OIDC] code_verifier type: ${typeof code_verifier}, length: ${String(code_verifier).length}`);
+  logger.debug(`[OIDC] code_challenge type: ${typeof code_challenge}, value: ${String(code_challenge)}`);
+  logger.debug(`[OIDC] code_verifier (first 20): ${String(code_verifier).substring(0, 20)}...`);
 
   // Use v6 buildAuthorizationUrl
   const buildAuthorizationUrl = _openid.buildAuthorizationUrl || _openid.default?.buildAuthorizationUrl;
@@ -271,10 +270,10 @@ async function handleCallback(req, { state, nonce, code_verifier } = {}) {
   }
 
   // Exchange code for tokens using v6 API
-  logger.info('[OIDC] Processing callback');
-  logger.info(`[OIDC] code_verifier type: ${typeof code_verifier}, length: ${code_verifier?.length || 'null'}`);
-  logger.info(`[OIDC] code_verifier (first 20): ${code_verifier ? String(code_verifier).substring(0, 20) + '...' : 'null'}`);
-  logger.info(`[OIDC] Callback URL: ${callbackUrl.href}`);
+  logger.debug('[OIDC] Processing callback');
+  logger.debug(`[OIDC] code_verifier type: ${typeof code_verifier}, length: ${code_verifier?.length || 'null'}`);
+  logger.debug(`[OIDC] code_verifier (first 20): ${code_verifier ? String(code_verifier).substring(0, 20) + '...' : 'null'}`);
+  logger.debug(`[OIDC] Callback URL: ${callbackUrl.href}`);
 
   const tokenSet = await authorizationCodeGrant(_config, callbackUrl, {
     pkceCodeVerifier: code_verifier,

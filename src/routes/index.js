@@ -540,13 +540,13 @@ router.get("/auth/oidc/callback", async (req, res) => {
   const code_verifier = req.cookies?.oidc_verifier;
   const redirectAfterLogin = req.cookies?.oidc_redirect || "/";
 
-  logger.info('[OIDC] Callback received - cookies present:', {
+  logger.debug('[OIDC] Callback received - cookies present:', {
     state: !!state,
     nonce: !!nonce,
     code_verifier: !!code_verifier,
   });
   if (code_verifier) {
-    logger.info(`[OIDC] Cookie code_verifier length: ${code_verifier.length}, first 20 chars: ${code_verifier.substring(0, 20)}...`);
+    logger.debug(`[OIDC] Cookie code_verifier length: ${code_verifier.length}, first 20 chars: ${code_verifier.substring(0, 20)}...`);
   }
 
   // Clear transient cookies regardless
