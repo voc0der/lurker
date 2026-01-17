@@ -1,21 +1,22 @@
 {
-	"name": "scarlet",
-	"module": "index.ts",
-	"type": "module",
-	"devDependencies": {
-		"@types/bun": "latest",
-		"pug-cli": "^1.0.0-alpha6"
-	},
-	"peerDependencies": {
-		"typescript": "^5.6.3"
-	},
-	"dependencies": {
-		"cookie-parser": "^1.4.7",
-		"express": "^4.21.1",
-		"express-rate-limit": "^7.4.1",
-		"he": "^1.2.0",
-		"jsonwebtoken": "^9.0.2",
-		"pug": "^3.0.3",
-		"timeago.js": "^4.0.2"
-	}
+  "name": "scarlet",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "pug-cli": "^1.0.0-alpha6"
+  },
+  "peerDependencies": {
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "he": "^1.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "pug": "^3.0.3",
+    "timeago.js": "^4.0.2",
+    "openid-client": "^6.0.0"
+  }
 }

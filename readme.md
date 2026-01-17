@@ -158,6 +158,20 @@ once installed, lurker runs in standalone mode without browser chrome.
 - `ADMIN_GROUP`: remote header group name that grants admin privileges, defaults to `admin`
 - `REVERSE_PROXY_WHITELIST`: comma-separated list of trusted proxy IPs for `trust proxy` setting
 
+**OIDC (OpenID Connect + PKCE)**
+- `OIDC_ENABLED`: set to `true` to enable OIDC
+- `OIDC_ISSUER_URL`: provider discovery URL (required)
+- `OIDC_CLIENT_ID`: client ID (required)
+- `OIDC_CLIENT_SECRET`: client secret (required)
+- `OIDC_REDIRECT_URI`: callback URL (required, e.g. `https://lurker.example.com/auth/oidc/callback`)
+- `OIDC_SCOPE`: scopes to request (default: `openid profile email`; add `offline_access` if your IdP requires it for refresh tokens)
+- `OIDC_AUTO_REGISTER`: auto-create users on first OIDC login (default: `true`)
+- `OIDC_ADMIN_CLAIM`: claim to use for admin mapping (default: `groups`)
+- `OIDC_ADMIN_VALUE`: value in the admin claim that grants admin (default: `admin`)
+- `OIDC_GROUP_CLAIM`: claim to read groups from and persist to the user record (default: `groups`)
+- `OIDC_ALLOWED_GROUPS`: comma-separated list of groups required to log in / auto-register (optional)
+
+
 **application settings**
 - `LURKER_THEME`: name of CSS theme file. The file must be present in `src/public`
 - `LOG_LEVEL`: logging verbosity - `debug`, `info` (default), `warn`, or `error`

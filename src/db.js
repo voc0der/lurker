@@ -90,4 +90,36 @@ runMigration("add-classic-layout-column", () => {
   `).run();
 });
 
+
+
+runMigration("add-oidc-support", () => {
+	// Core OIDC fields
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN oidc_sub TEXT
+  `).run();
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN oidc_refresh_token TEXT
+  `).run();
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN oidc_token_expires_at INTEGER
+  `).run();
+
+	// Optional: store groups from OIDC / remote headers (JSON array string)
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN groups TEXT DEFAULT '[]'
+  `).run();
+
+	// Indexes (SQLite UNIQUE index allows multiple NULLs)
+	db.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_oidc_sub_unique ON users(oidc_sub)
+  `).run();
+	db.query(`
+    CREATE INDEX IF NOT EXISTS idx_users_oidc_sub ON users(oidc_sub)
+  `).run();
+});
+
 module.exports = { db };

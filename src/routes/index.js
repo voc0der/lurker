@@ -8,6 +8,7 @@ const { db } = require("../db");
 const { authenticateToken, authenticateAdmin } = require("../auth");
 const { validateInviteToken } = require("../invite");
 const logger = require("../logger");
+const oidc = require("../oidc");
 
 const router = express.Router();
 const G = new geddit.Geddit();
@@ -31,7 +32,7 @@ function setAuthTokenCookie(res, username, userId) {
 // Middleware to check if user is logged in via HTTP headers
 async function loginViaHeaders(req, res, next) {
   const remoteUser = req.headers['remote-user'] || req.headers['HTTP_AUTH_USER'];
-  const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',') : [];
+  const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',').map(s => s.trim()).filter(Boolean) : [];
 
   // We need env.REMOTE_HEADER_LOGIN=true to use SSO. Also check if remoteUser header is missing
   if (!(process.env.REMOTE_HEADER_LOGIN || false) || !remoteUser) {
@@ -56,17 +57,18 @@ async function loginViaHeaders(req, res, next) {
       const hashedPassword = await Bun.password.hash(randomPassword);  // Hash the random password
 
       const insertedRecord = db.query(
-        "INSERT INTO users (username, password_hash, isAdmin) VALUES ($username, $hashedPassword, $isAdmin)"
+        "INSERT INTO users (username, password_hash, isAdmin, groups) VALUES ($username, $hashedPassword, $isAdmin, $groups)"
       ).run({
         username: remoteUser,
         hashedPassword,
-        isAdmin: 0,
+        isAdmin: req.user.isAdmin ? 1 : 0,
+        groups: JSON.stringify(remoteGroups),
       });
 
       const userId = insertedRecord.lastInsertRowid;
       setAuthTokenCookie(res, remoteUser, userId);
 
-      const redirectTo = req.query.direct || '/';
+      const redirectTo = req.query.redirect || req.query.direct || '/';
       return res.redirect(redirectTo);
     } catch (error) {
       logger.error("Error creating user from headers:", error);
@@ -76,18 +78,22 @@ async function loginViaHeaders(req, res, next) {
     // Set user id from the database record
     req.user.id = existingUser.id;
 
-    // Check if the isAdmin value in the database matches the remote header
-    if (remoteGroups.length > 0 && existingUser.isAdmin !== req.user.isAdmin) {
-      // Update the user's isAdmin field to match the header
-      db.query("UPDATE users SET isAdmin = $isAdmin WHERE id = $id")
-        .run({
-          isAdmin: req.user.isAdmin ? 1 : 0,
-          id: req.user.id,
-        });
+    // Keep isAdmin/groups in sync with remote headers
+    if (remoteGroups.length > 0) {
+      const newGroups = JSON.stringify(remoteGroups);
+      const isAdmin = req.user.isAdmin ? 1 : 0;
+      if (existingUser.isAdmin !== isAdmin || (existingUser.groups || "[]") !== newGroups) {
+        db.query("UPDATE users SET isAdmin = $isAdmin, groups = $groups WHERE id = $id")
+          .run({
+            isAdmin,
+            groups: newGroups,
+            id: req.user.id,
+          });
+      }
     }
 
     setAuthTokenCookie(res, remoteUser, existingUser.id);
-    const redirectTo = req.query.direct || '/';
+    const redirectTo = req.query.redirect || req.query.direct || '/';
     return res.redirect(redirectTo);
   }
 }
@@ -469,13 +475,14 @@ router.post("/register", validateInviteToken, async (req, res) => {
 
 		const insertedRecord = db
 			.query(
-				"INSERT INTO users (username, password_hash, isAdmin) VALUES ($username, $hashedPassword, $isAdmin)",
+				"INSERT INTO users (username, password_hash, isAdmin, groups) VALUES ($username, $hashedPassword, $isAdmin, $groups)",
 			)
 			.run({
-				username,
-				hashedPassword,
-				isAdmin: req.isFirstUser ? 1 : 0,
-			});
+			username,
+			hashedPassword,
+			isAdmin: req.isFirstUser ? 1 : 0,
+			groups: "[]",
+		});
 		const id = insertedRecord.lastInsertRowid;
 		setAuthTokenCookie(res, username, id);
 		res.status(200).redirect("/");
@@ -487,16 +494,183 @@ router.post("/register", validateInviteToken, async (req, res) => {
 	}
 });
 
+
+
+// OIDC routes (PKCE)
+router.get("/auth/oidc/login", async (req, res) => {
+  if (!oidc.isOIDCEnabled()) {
+    return res.redirect("/login?message=OIDC not configured");
+  }
+
+  const redirectAfterLogin = req.query.redirect || "/";
+
+  try {
+    const { authorizationUrl, state, nonce, code_verifier, redirectAfterLogin: ra } = oidc.getAuthorizationUrl({
+      redirectAfterLogin,
+    });
+
+    // IMPORTANT: SameSite must be Lax (not Strict) so cookies are sent on the cross-site callback redirect.
+    const cookieOptions = {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Lax",
+      maxAge: 10 * 60 * 1000, // 10 minutes
+      path: "/auth/oidc",
+    };
+
+    res.cookie("oidc_state", state, cookieOptions);
+    res.cookie("oidc_nonce", nonce, cookieOptions);
+    res.cookie("oidc_verifier", code_verifier, cookieOptions);
+    res.cookie("oidc_redirect", ra, cookieOptions);
+
+    return res.redirect(authorizationUrl);
+  } catch (err) {
+    logger.error("Failed to start OIDC login", err);
+    return res.redirect("/login?message=Failed to start OIDC login");
+  }
+});
+
+router.get("/auth/oidc/callback", async (req, res) => {
+  if (!oidc.isOIDCEnabled()) {
+    return res.redirect("/login?message=OIDC not configured");
+  }
+
+  const state = req.cookies?.oidc_state;
+  const nonce = req.cookies?.oidc_nonce;
+  const code_verifier = req.cookies?.oidc_verifier;
+  const redirectAfterLogin = req.cookies?.oidc_redirect || "/";
+
+  // Clear transient cookies regardless
+  res.clearCookie("oidc_state", { path: "/auth/oidc" });
+  res.clearCookie("oidc_nonce", { path: "/auth/oidc" });
+  res.clearCookie("oidc_verifier", { path: "/auth/oidc" });
+  res.clearCookie("oidc_redirect", { path: "/auth/oidc" });
+
+  try {
+    if (!state || !nonce || !code_verifier) {
+      return res.redirect("/login?bypass_oidc=true&message=OIDC session expired, try again");
+    }
+
+    const { tokenSet, claims } = await oidc.handleCallback(req, {
+      state,
+      nonce,
+      code_verifier,
+    });
+
+    const sub = claims?.sub;
+    if (!sub) {
+      return res.redirect("/login?bypass_oidc=true&message=OIDC provider did not return sub");
+    }
+
+    const groups = oidc.extractGroupsFromClaims(claims);
+    if (!oidc.isAllowedByGroups(groups)) {
+      return res.redirect("/login?bypass_oidc=true&message=Not allowed (missing required group)");
+    }
+
+    const isFirstUser = db.query("SELECT 1 FROM users LIMIT 1").get() === null;
+    const firstUserAdmin = process.env.OIDC_FIRST_USER_ADMIN === undefined
+      ? true
+      : String(process.env.OIDC_FIRST_USER_ADMIN).toLowerCase() === "true" || process.env.OIDC_FIRST_USER_ADMIN === "1";
+
+    let isAdmin = oidc.isAdminFromClaims(claims, groups) ? 1 : 0;
+    if (isFirstUser && firstUserAdmin) isAdmin = 1;
+
+    const autoRegister = process.env.OIDC_AUTO_REGISTER === undefined
+      ? true
+      : String(process.env.OIDC_AUTO_REGISTER).toLowerCase() === "true" || process.env.OIDC_AUTO_REGISTER === "1";
+
+    let user = db.query("SELECT * FROM users WHERE oidc_sub = $sub").get({ sub });
+
+    const expiresAt = oidc.computeExpiresAtSeconds(tokenSet);
+    const encRefresh = tokenSet.refresh_token ? oidc.encryptRefreshToken(tokenSet.refresh_token) : null;
+
+    if (!user) {
+      if (!autoRegister) {
+        return res.redirect("/login?bypass_oidc=true&message=Account not registered");
+      }
+
+      let desiredUsername = oidc.resolveUsernameFromClaims(claims) || sub;
+      desiredUsername = String(desiredUsername).trim();
+
+      // Ensure username uniqueness (avoid collision with local users)
+      const existingByUsername = db.query("SELECT id FROM users WHERE username = $username").get({
+        username: desiredUsername,
+      });
+      if (existingByUsername) {
+        const suffix = crypto.createHash("sha256").update(String(sub)).digest("hex").slice(0, 8);
+        desiredUsername = `${desiredUsername}-${suffix}`;
+      }
+
+      const randomPassword = generateRandomPassword(52);
+      const hashedPassword = await Bun.password.hash(randomPassword);
+
+      const insertedRecord = db.query(
+        "INSERT INTO users (username, password_hash, isAdmin, oidc_sub, oidc_refresh_token, oidc_token_expires_at, groups) VALUES ($username, $hashedPassword, $isAdmin, $oidc_sub, $oidc_refresh_token, $oidc_token_expires_at, $groups)"
+      ).run({
+        username: desiredUsername,
+        hashedPassword,
+        isAdmin,
+        oidc_sub: sub,
+        oidc_refresh_token: encRefresh,
+        oidc_token_expires_at: expiresAt,
+        groups: JSON.stringify(groups),
+      });
+
+      const userId = insertedRecord.lastInsertRowid;
+      setAuthTokenCookie(res, desiredUsername, userId);
+      return res.redirect(redirectAfterLogin);
+    }
+
+    // Existing OIDC user: update admin/groups and rotate refresh token if provided
+    const baseSql = "UPDATE users SET isAdmin = $isAdmin, groups = $groups, oidc_token_expires_at = $exp";
+    const sql = encRefresh ? (baseSql + ", oidc_refresh_token = $rt WHERE id = $id") : (baseSql + " WHERE id = $id");
+
+    const params = {
+      isAdmin,
+      groups: JSON.stringify(groups),
+      exp: expiresAt,
+      id: user.id,
+    };
+    if (encRefresh) params.rt = encRefresh;
+
+    db.query(sql).run(params);
+
+    setAuthTokenCookie(res, user.username, user.id);
+    return res.redirect(redirectAfterLogin);
+  } catch (err) {
+    logger.error("OIDC callback failed", err);
+    return res.redirect("/login?bypass_oidc=true&message=OIDC login failed");
+  }
+});
+
 // GET /login
 router.get("/login", async (req, res, next) => {
   const token = req.cookies.auth_token;
   if (token) {
     return res.redirect("/");
   }
-  if (req.headers['remote-user']) {
-    return loginViaHeaders(req, res, next); 
+
+  const redirectTo = req.query.redirect || req.query.direct || "/";
+  const bypassOidc = String(req.query.bypass_oidc || "").toLowerCase() === "true" || req.query.bypass_oidc === "1";
+
+  // Priority 1: OIDC
+  if (oidc.isOIDCEnabled() && !bypassOidc) {
+    return res.redirect(`/auth/oidc/login?redirect=${encodeURIComponent(redirectTo)}`);
   }
-  res.render("login", { message: req.query.message });
+
+  // Priority 2: Remote Header SSO
+  if (req.headers['remote-user']) {
+    return loginViaHeaders(req, res, next);
+  }
+
+  // Priority 3: Manual login
+  return res.render("login", {
+    message: req.query.message,
+    oidcEnabled: oidc.isOIDCEnabled(),
+    redirect: redirectTo,
+    bypassOidc,
+    ...commonRenderOptions,
+  });
 });
 
 // POST /login (form submission)
@@ -512,7 +686,7 @@ router.post("/login", async (req, res) => {
   if (user && (await Bun.password.verify(password, user.password_hash))) {
     try {
       setAuthTokenCookie(res, username, user.id);
-      const redirectTo = req.query.direct || '/';
+      const redirectTo = req.query.redirect || req.query.direct || '/';
       return res.redirect(redirectTo);
     } catch (error) {
       logger.error("Error signing JWT:", error);
