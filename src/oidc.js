@@ -222,9 +222,9 @@ function getAuthorizationUrl({ redirectAfterLogin } = {}) {
   const code_verifier = randomPKCECodeVerifier();
   const code_challenge = calculatePKCECodeChallenge(code_verifier);
 
-  logger.debug('OIDC login - code_verifier:', code_verifier.substring(0, 10) + '...');
-  logger.debug('OIDC login - code_challenge:', code_challenge.substring(0, 10) + '...');
-  logger.debug('OIDC login - state:', state.substring(0, 10) + '...');
+  logger.debug('OIDC login - code_verifier:', String(code_verifier).substring(0, 10) + '...');
+  logger.debug('OIDC login - code_challenge:', String(code_challenge).substring(0, 10) + '...');
+  logger.debug('OIDC login - state:', String(state).substring(0, 10) + '...');
 
   // Use v6 buildAuthorizationUrl
   const buildAuthorizationUrl = _openid.buildAuthorizationUrl || _openid.default?.buildAuthorizationUrl;
