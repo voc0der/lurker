@@ -585,20 +585,36 @@ router.get("/auth/oidc/callback", async (req, res) => {
     const encRefresh = tokenSet.refresh_token ? oidc.encryptRefreshToken(tokenSet.refresh_token) : null;
 
     if (!user) {
-      if (!autoRegister) {
-        return res.redirect("/login?bypass_oidc=true&message=Account not registered");
-      }
-
+      // Check if there's an existing user with matching username (account linking)
       let desiredUsername = oidc.resolveUsernameFromClaims(claims) || sub;
       desiredUsername = String(desiredUsername).trim();
 
-      // Ensure username uniqueness (avoid collision with local users)
-      const existingByUsername = db.query("SELECT id FROM users WHERE username = $username").get({
+      const existingByUsername = db.query("SELECT * FROM users WHERE username = $username").get({
         username: desiredUsername,
       });
+
       if (existingByUsername) {
-        const suffix = crypto.createHash("sha256").update(String(sub)).digest("hex").slice(0, 8);
-        desiredUsername = `${desiredUsername}-${suffix}`;
+        // Link existing password account to OIDC
+        logger.info(`Linking existing user '${desiredUsername}' to OIDC sub: ${sub}`);
+
+        db.query(
+          "UPDATE users SET oidc_sub = $sub, oidc_refresh_token = $rt, oidc_token_expires_at = $exp, isAdmin = $isAdmin, groups = $groups WHERE id = $id"
+        ).run({
+          sub,
+          rt: encRefresh,
+          exp: expiresAt,
+          isAdmin,
+          groups: JSON.stringify(groups),
+          id: existingByUsername.id,
+        });
+
+        setAuthTokenCookie(res, existingByUsername.username, existingByUsername.id);
+        return res.redirect(redirectAfterLogin);
+      }
+
+      // No existing user - create new if auto-register enabled
+      if (!autoRegister) {
+        return res.redirect("/login?bypass_oidc=true&message=Account not registered");
       }
 
       const randomPassword = generateRandomPassword(52);
@@ -617,6 +633,7 @@ router.get("/auth/oidc/callback", async (req, res) => {
       });
 
       const userId = insertedRecord.lastInsertRowid;
+      logger.info(`Created new OIDC user '${desiredUsername}' with sub: ${sub}`);
       setAuthTokenCookie(res, desiredUsername, userId);
       return res.redirect(redirectAfterLogin);
     }
