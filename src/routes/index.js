@@ -309,6 +309,8 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 
 // GET /dashboard
 router.get("/dashboard", authenticateToken, async (req, res) => {
+	console.log("Dashboard - req.user from authenticateToken:", req.user);
+
 	let invites = null;
 	const isAdmin = db
 		.query("SELECT isAdmin FROM users WHERE id = $id and isAdmin = 1")
@@ -325,10 +327,18 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 				usedAt: Date.parse(inv.usedAt),
 			}));
 	}
+
+	console.log("Dashboard - rendering with user:", {
+		infiniteScroll: req.user.infiniteScroll,
+		useClassicLayout: req.user.useClassicLayout,
+		themePreference: req.user.themePreference
+	});
+
 	res.render("dashboard", {
 		invites,
 		isAdmin,
 		user: req.user,
+		message: req.query.message,
 		query: req.query,
 		...commonRenderOptions,
 	});

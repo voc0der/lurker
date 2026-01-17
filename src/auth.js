@@ -26,6 +26,13 @@ function authenticateToken(req, res, next) {
     let dbUser;
     try {
       dbUser = db.query("SELECT * FROM users WHERE username = $username").get({ username: decoded.username });
+      console.log("authenticateToken - loaded user from DB:", {
+        id: dbUser?.id,
+        username: dbUser?.username,
+        infiniteScroll: dbUser?.infiniteScroll,
+        useClassicLayout: dbUser?.useClassicLayout,
+        themePreference: dbUser?.themePreference
+      });
     } catch (err) {
       console.log("Database error:", err);
       return res.redirect("/login?message=Database error.");
