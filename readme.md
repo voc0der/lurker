@@ -1,31 +1,47 @@
 ### lurker
 
-This is a fork of https://github.com/oppiliappan/lurker/ and I respect their work! It adds `SSO` via Remote Header Authorization.
+This is a fork of https://github.com/oppiliappan/lurker/ and I respect their work!
 
-lurker is a selfhostable, read-only reddit client. it is
-better than old-reddit because:
+lurker is a selfhostable, privacy-focused reddit client with SSO support,
+user preferences, and PWA capabilities. it is better than old-reddit because:
 
-- it renders well on mobile
-- it respects `prefers-color-scheme`
+- it renders well on mobile with responsive layouts
+- it respects `prefers-color-scheme` with multiple theme options
 - no account necessary to subscribe to subreddits
 - no account necessary for over-18 content
+- installable as a Progressive Web App (PWA)
+- customizable per-user experience (infinite scroll, layout, themes)
 
 i host a version for myself and a few friends. reach out to
 me if you would like an invite.
 
 ### features
 
-- minimal use of client-side javascript
-- account-based subscription system
-- pagination
-- invite-only user management
-- comment collapsing, jump-to-next/prev comment
-- "search on undelete" url for deleted comments
-- over-18, spoiler images are hidden by default
+- **authentication & security**
+  - SSO via Remote Header Authorization (Authelia, Authentik, etc.)
+  - invite-only user management
+  - admin dashboard with invite tokens
+  - rate limiting and reverse proxy support
+
+- **user experience**
+  - minimal use of client-side javascript
+  - account-based subscription system
+  - per-user preferences (infinite scroll, theme, layout)
+  - "Never Ending Reddit" infinite scroll option
+  - Classic RES-style compact layout for desktop
+  - multiple themes: auto (system), light, dark, RES night mode
+  - Progressive Web App (PWA) - installable on mobile devices
+
+- **content & navigation**
+  - pagination with infinite scroll option
+  - comment collapsing, jump-to-next/prev comment
+  - crosspost support
+  - "search on undelete" url for deleted comments
+  - over-18, spoiler images are hidden by default
+  - inline post thumbnail expansion
 
 i use lurker daily, and above features are pretty good for
-my use. i do not intend to add much more, i don't like
-writing js.
+my use.
 
 ### gallery
 
@@ -80,10 +96,18 @@ services:
   lurker:
     image: ghcr.io/oppiliappan/lurker:latest
     container_name: lurker
+    environment:
+      - PUID=1000              # user ID for file permissions
+      - PGID=1000              # group ID for file permissions
+      - LURKER_PORT=3000
+      - LOG_LEVEL=info         # debug, info, warn, or error
+      # - REMOTE_HEADER_LOGIN=true  # uncomment for SSO
+      # - ADMIN_GROUP=admin         # SSO admin group name
     volumes:
       - /your/host/lurker-data:/data
     ports:
       - "3000:3000"
+    restart: unless-stopped
 ```
 
 or with just [bun](https://bun.sh/):
@@ -101,10 +125,43 @@ username at the top-right to view the dashboard and to
 invite other users to your instance. copy the link and send
 it to your friends!
 
+**user preferences**
+
+each user can customize their experience via the dashboard:
+- **Never Ending Reddit**: enable infinite scroll instead of pagination
+- **Classic RES-style Layout**: toggle compact desktop layout (thumbnails on left)
+- **Theme Preference**: choose between auto (system), light, dark, or RES night mode
+
+**PWA installation**
+
+lurker can be installed as a Progressive Web App on mobile devices:
+- **Android**: Open in Chrome → Menu (⋮) → "Install app" or "Add to Home screen"
+- **iOS**: Open in Safari → Share (⬆) → "Add to Home Screen"
+
+once installed, lurker runs in standalone mode without browser chrome.
+
 ### environment variables
 
-- `LURKER_PORT`: port to listen on, defaults to `3000`.
-- `LURKER_THEME`: name of CSS theme file. The file must be present in `src/public`.
+**server configuration**
+- `LURKER_PORT`: port to listen on, defaults to `3000`
+- `HTTP_BINDING`: IP address to bind to, defaults to `0.0.0.0`
+- `LURKER_SSL_CERT_PATH`: path to SSL certificate file for HTTPS
+- `LURKER_SSL_KEY_PATH`: path to SSL key file for HTTPS
+
+**docker-specific**
+- `PUID`: user ID for file permissions in Docker container, defaults to `1000`
+- `PGID`: group ID for file permissions in Docker container, defaults to `1000`
+
+**authentication & security**
+- `JWT_SECRET_KEY`: secret key for JWT token signing (auto-generated if not set)
+- `REMOTE_HEADER_LOGIN`: enable SSO via remote headers (`true`/`false`)
+- `ADMIN_GROUP`: remote header group name that grants admin privileges, defaults to `admin`
+- `REVERSE_PROXY_WHITELIST`: comma-separated list of trusted proxy IPs for `trust proxy` setting
+
+**application settings**
+- `LURKER_THEME`: name of CSS theme file. The file must be present in `src/public`
+- `LOG_LEVEL`: logging verbosity - `debug`, `info` (default), `warn`, or `error`
+- `RATE_LIMIT`: maximum requests per 15-minute window per IP, defaults to `100`
 
 ### technical
 
@@ -121,11 +178,21 @@ nix build .#lurker  # build the thing
 
 ### todo
 
+**upcoming features**
 - [ ] avoid js to toggle details in views/index.pug
 - [ ] highlights for op, sticky etc.
 - [ ] open in reddit/reply in reddit link
 - [ ] subscription manager: reorder, mass add
-- [ ] support crossposts
+- [ ] service worker for offline PWA support
+
+**completed**
+- [x] support crossposts
+- [x] PWA support (manifest, icons, meta tags)
+- [x] user preferences system (infinite scroll, themes, layout)
+- [x] "Never Ending Reddit" infinite scroll
+- [x] Classic RES-style layout
+- [x] multiple theme support (auto/light/dark/RES)
+- [x] SSO via remote header authorization
 - [x] collapse even singular comments
 - [x] details tag on safari
 - [x] expand/collapse comments
