@@ -2,12 +2,14 @@ const crypto = require('node:crypto');
 const { db } = require('./db');
 const logger = require('./logger');
 
-let _client = null;
-let _issuer = null;
+let _config = null; // OIDC server configuration
 let _enabled = false;
 let _initError = null;
 let _encryptionKey = null; // 32 bytes
 let _openid = null;
+let _clientId = null;
+let _clientSecret = null;
+let _redirectUri = null;
 
 function _boolEnv(name, defaultValue = false) {
   const v = process.env[name];
@@ -78,7 +80,7 @@ function _normalizeGroups(value) {
 }
 
 function isOIDCEnabled() {
-  return _enabled && _client !== null;
+  return _enabled && _config !== null;
 }
 
 function getInitError() {
@@ -88,8 +90,7 @@ function getInitError() {
 async function initializeOIDC({ jwtKey } = {}) {
   _initError = null;
   _enabled = false;
-  _client = null;
-  _issuer = null;
+  _config = null;
 
   const masterSwitch = _boolEnv('OIDC_ENABLED', false);
   if (!masterSwitch) {
@@ -98,11 +99,11 @@ async function initializeOIDC({ jwtKey } = {}) {
   }
 
   const issuerUrl = _getRequiredEnv('OIDC_ISSUER_URL');
-  const clientId = _getRequiredEnv('OIDC_CLIENT_ID');
-  const clientSecret = _getRequiredEnv('OIDC_CLIENT_SECRET');
-  const redirectUri = _getRequiredEnv('OIDC_REDIRECT_URI');
+  _clientId = _getRequiredEnv('OIDC_CLIENT_ID');
+  _clientSecret = _getRequiredEnv('OIDC_CLIENT_SECRET');
+  _redirectUri = _getRequiredEnv('OIDC_REDIRECT_URI');
 
-  if (!issuerUrl || !clientId || !clientSecret || !redirectUri) {
+  if (!issuerUrl || !_clientId || !_clientSecret || !_redirectUri) {
     logger.warn('OIDC disabled: missing required env vars. Need OIDC_ISSUER_URL, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_REDIRECT_URI.');
     return false;
   }
@@ -110,24 +111,16 @@ async function initializeOIDC({ jwtKey } = {}) {
   try {
     if (!_openid) {
       _openid = await import('openid-client');
-      logger.debug('openid-client imported, available exports:', Object.keys(_openid));
+      logger.debug('openid-client v6 imported');
     }
 
-    // In Bun, ES module imports from CommonJS have exports directly on the namespace
-    const Issuer = _openid.Issuer || _openid.default?.Issuer;
-    if (!Issuer) {
-      throw new Error('Could not find Issuer export from openid-client. Available exports: ' + Object.keys(_openid).join(', '));
+    // Use the new v6 discovery API
+    const discovery = _openid.discovery || _openid.default?.discovery;
+    if (!discovery) {
+      throw new Error('Could not find discovery function from openid-client');
     }
 
-    _issuer = await Issuer.discover(issuerUrl);
-
-    // openid-client v5/v6 compatible client construction
-    _client = new _issuer.Client({
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uris: [redirectUri],
-      response_types: ['code'],
-    });
+    _config = await discovery(new URL(issuerUrl), _clientId, _clientSecret);
 
     _encryptionKey = _deriveEncryptionKey(jwtKey);
 
@@ -138,8 +131,7 @@ async function initializeOIDC({ jwtKey } = {}) {
     _initError = err;
     logger.error('OIDC initialization failed. Falling back to other auth methods.', err);
     _enabled = false;
-    _client = null;
-    _issuer = null;
+    _config = null;
     return false;
   }
 }
@@ -184,22 +176,31 @@ function getAuthorizationUrl({ redirectAfterLogin } = {}) {
   }
 
   const scope = _getRequiredEnv('OIDC_SCOPE') || 'openid profile email';
-  const redirectUri = _getRequiredEnv('OIDC_REDIRECT_URI');
 
-  const generators = _openid.generators || _openid.default?.generators;
-  if (!generators) {
-    throw new Error('Could not find generators export from openid-client');
+  // Use v6 random generators
+  const randomState = _openid.randomState || _openid.default?.randomState;
+  const randomNonce = _openid.randomNonce || _openid.default?.randomNonce;
+  const randomPKCECodeVerifier = _openid.randomPKCECodeVerifier || _openid.default?.randomPKCECodeVerifier;
+  const calculatePKCECodeChallenge = _openid.calculatePKCECodeChallenge || _openid.default?.calculatePKCECodeChallenge;
+
+  if (!randomState || !randomNonce || !randomPKCECodeVerifier || !calculatePKCECodeChallenge) {
+    throw new Error('Could not find PKCE helper functions from openid-client');
   }
 
-  const state = generators.state();
-  const nonce = generators.nonce();
-  const code_verifier = generators.codeVerifier();
-  const code_challenge = generators.codeChallenge(code_verifier);
+  const state = randomState();
+  const nonce = randomNonce();
+  const code_verifier = randomPKCECodeVerifier();
+  const code_challenge = calculatePKCECodeChallenge(code_verifier);
 
-  const authorizationUrl = _client.authorizationUrl({
+  // Use v6 buildAuthorizationUrl
+  const buildAuthorizationUrl = _openid.buildAuthorizationUrl || _openid.default?.buildAuthorizationUrl;
+  if (!buildAuthorizationUrl) {
+    throw new Error('Could not find buildAuthorizationUrl from openid-client');
+  }
+
+  const authorizationUrl = buildAuthorizationUrl(_config, {
     scope,
-    redirect_uri: redirectUri,
-    response_type: 'code',
+    redirect_uri: _redirectUri,
     state,
     nonce,
     code_challenge,
@@ -207,7 +208,7 @@ function getAuthorizationUrl({ redirectAfterLogin } = {}) {
   });
 
   return {
-    authorizationUrl,
+    authorizationUrl: authorizationUrl.href,
     state,
     nonce,
     code_verifier,
@@ -220,35 +221,28 @@ async function handleCallback(req, { state, nonce, code_verifier } = {}) {
     throw new Error('OIDC not enabled');
   }
 
-  const redirectUri = _getRequiredEnv('OIDC_REDIRECT_URI');
-
-  let params;
-  try {
-    params = _client.callbackParams(req);
-  } catch (_e) {
-    // Fallback for environments where callbackParams doesn't like Express req
-    params = req.query || {};
+  // Get the authorization code grant function
+  const authorizationCodeGrant = _openid.authorizationCodeGrant || _openid.default?.authorizationCodeGrant;
+  if (!authorizationCodeGrant) {
+    throw new Error('Could not find authorizationCodeGrant from openid-client');
   }
 
-  // openid-client v5 and v6 differ slightly; try both.
-  let tokenSet;
-  try {
-    tokenSet = await _client.callback(redirectUri, params, { state, nonce, code_verifier });
-  } catch (err1) {
-    try {
-      tokenSet = await _client.authorizationCallback(redirectUri, params, { state, nonce, code_verifier });
-    } catch (err2) {
-      logger.error('OIDC callback exchange failed.', err2);
-      throw err1;
-    }
+  // Build the callback URL with query params
+  const callbackUrl = new URL(_redirectUri);
+  const params = req.query || {};
+  for (const [key, value] of Object.entries(params)) {
+    callbackUrl.searchParams.set(key, value);
   }
 
-  let claims;
-  try {
-    claims = tokenSet.claims();
-  } catch (_e) {
-    claims = tokenSet.id_token ? _client.decryptIdToken(tokenSet.id_token) : {};
-  }
+  // Exchange code for tokens using v6 API
+  const tokenSet = await authorizationCodeGrant(_config, callbackUrl, {
+    pkceCodeVerifier: code_verifier,
+    expectedState: state,
+    expectedNonce: nonce,
+  });
+
+  // Extract claims from ID token
+  const claims = tokenSet.claims || {};
 
   return { tokenSet, claims };
 }
@@ -312,9 +306,16 @@ async function refreshAccessToken(userId) {
     return false;
   }
 
+  // Use v6 refreshTokenGrant
+  const refreshTokenGrant = _openid.refreshTokenGrant || _openid.default?.refreshTokenGrant;
+  if (!refreshTokenGrant) {
+    logger.error('Could not find refreshTokenGrant from openid-client');
+    return false;
+  }
+
   let tokenSet;
   try {
-    tokenSet = await _client.refresh(refreshToken);
+    tokenSet = await refreshTokenGrant(_config, refreshToken);
   } catch (err) {
     logger.error('OIDC token refresh failed.', err);
     return false;
