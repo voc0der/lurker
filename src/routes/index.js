@@ -505,7 +505,7 @@ router.get("/auth/oidc/login", async (req, res) => {
   const redirectAfterLogin = req.query.redirect || "/";
 
   try {
-    const { authorizationUrl, state, nonce, code_verifier, redirectAfterLogin: ra } = oidc.getAuthorizationUrl({
+    const { authorizationUrl, state, nonce, code_verifier, redirectAfterLogin: ra } = await oidc.getAuthorizationUrl({
       redirectAfterLogin,
     });
 

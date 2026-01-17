@@ -200,7 +200,7 @@ function decryptRefreshToken(enc) {
   return plaintext.toString('utf8');
 }
 
-function getAuthorizationUrl({ redirectAfterLogin } = {}) {
+async function getAuthorizationUrl({ redirectAfterLogin } = {}) {
   if (!isOIDCEnabled()) {
     throw new Error('OIDC not enabled');
   }
@@ -220,7 +220,7 @@ function getAuthorizationUrl({ redirectAfterLogin } = {}) {
   const state = randomState();
   const nonce = randomNonce();
   const code_verifier = randomPKCECodeVerifier();
-  const code_challenge = calculatePKCECodeChallenge(code_verifier);
+  const code_challenge = await calculatePKCECodeChallenge(code_verifier);
 
   // Log at INFO level to ensure visibility
   logger.info('[OIDC] Starting authorization flow');
