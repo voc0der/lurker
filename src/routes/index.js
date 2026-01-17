@@ -347,8 +347,8 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 // POST /update-preferences
 router.post("/update-preferences", authenticateToken, async (req, res) => {
 	const { infiniteScroll, useClassicLayout, themePreference } = req.body;
-	const infiniteScrollValue = infiniteScroll === "on" ? 1 : 0;
-	const useClassicLayoutValue = useClassicLayout === "on" ? 1 : 0;
+	const infiniteScrollValue = infiniteScroll === "1" ? 1 : 0;
+	const useClassicLayoutValue = useClassicLayout === "1" ? 1 : 0;
 	const themeValue = themePreference || 'auto';
 
 	console.log("Received preferences:", {
