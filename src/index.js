@@ -32,13 +32,8 @@ async function bootstrap() {
 	app.set("views", path.join(__dirname, "views"));
 	app.set("view engine", "pug");
 
-	const routes = require("./routes/index");
-	app.use(express.json());
-	app.use(express.urlencoded({ extended: true }));
-	app.use(express.static(path.join(__dirname, "public")));
-	app.use(express.static(path.join(__dirname, "assets")));
-	app.use(cookieParser());
-
+	// CRITICAL: Set trust proxy BEFORE any cookie/session middleware
+	// This ensures Express correctly identifies HTTPS requests behind a reverse proxy
 	if (process.env.REMOTE_HEADER_LOGIN || oidc.isOIDCEnabled()) {
 		// Set trust proxy dynamically based on trustedProxyIPs, fallback to '1'
 		if (trustedProxyIPs.some((ip) => ip)) {
@@ -50,6 +45,13 @@ async function bootstrap() {
 			app.set("trust proxy", 1);
 		}
 	}
+
+	const routes = require("./routes/index");
+	app.use(express.json());
+	app.use(express.urlencoded({ extended: true }));
+	app.use(express.static(path.join(__dirname, "public")));
+	app.use(express.static(path.join(__dirname, "assets")));
+	app.use(cookieParser());
 
 	app.use(
 		rateLimit({
