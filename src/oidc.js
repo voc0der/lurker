@@ -110,9 +110,9 @@ async function initializeOIDC({ jwtKey } = {}) {
   }
 
   try {
-    logger.info(`[OIDC] Initializing with issuer: ${issuerUrl}`);
-    logger.info(`[OIDC] Client ID: ${_clientId}`);
-    logger.info(`[OIDC] Redirect URI: ${_redirectUri}`);
+    logger.debug(`[OIDC] Initializing with issuer: ${issuerUrl}`);
+    logger.debug(`[OIDC] Client ID: ${_clientId}`);
+    logger.debug(`[OIDC] Redirect URI: ${_redirectUri}`);
 
     if (!_openid) {
       _openid = await import('openid-client');
@@ -126,7 +126,7 @@ async function initializeOIDC({ jwtKey } = {}) {
     }
 
     _config = await discovery(new URL(issuerUrl), _clientId, _clientSecret);
-    logger.info(`[OIDC] Discovery completed successfully`);
+    logger.debug(`[OIDC] Discovery completed successfully`);
 
     // Determine client authentication method
     // Default to client_secret_post (configure IDP to support this method)
@@ -352,7 +352,7 @@ function isAllowedByGroups(groups) {
   const groupsLower = groups.map(g => g.toLowerCase());
   const isAllowed = groupsLower.some((g) => allowedLower.includes(g));
 
-  logger.info(`[OIDC] Group authorization check: user groups=${JSON.stringify(groups)}, allowed=${JSON.stringify(allowed)}, result=${isAllowed}`);
+  logger.debug(`[OIDC] Group authorization check: user groups=${JSON.stringify(groups)}, allowed=${JSON.stringify(allowed)}, result=${isAllowed}`);
   return isAllowed;
 }
 
