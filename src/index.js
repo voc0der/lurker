@@ -39,11 +39,12 @@ async function bootstrap() {
 	app.use(express.static(path.join(__dirname, "assets")));
 	app.use(cookieParser());
 
-	if (process.env.REMOTE_HEADER_LOGIN || false) {
+	if (process.env.REMOTE_HEADER_LOGIN || oidc.isOIDCEnabled()) {
 		// Set trust proxy dynamically based on trustedProxyIPs, fallback to '1'
 		if (trustedProxyIPs.some((ip) => ip)) {
 			const trustProxyRanges = trustedProxyIPs.join(",");
 			app.set("trust proxy", trustProxyRanges);
+			logger.info(`Trust proxy enabled with IPs: ${trustProxyRanges}`);
 		} else {
 			logger.warn("No valid IPs in REVERSE_PROXY_WHITELIST. Falling back to trust proxy: 1.");
 			app.set("trust proxy", 1);
