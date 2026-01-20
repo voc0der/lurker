@@ -83,8 +83,19 @@ jobs:
           echo "Attempting to log in to Docker Hub..."
           docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Publish Docker Image
+      - name: Log in to GitHub Container Registry
         run: |
-          echo "Publishing Docker image..."
+          echo "Attempting to log in to GitHub Container Registry..."
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Publish Docker Image to Docker Hub
+        run: |
+          echo "Publishing Docker image to Docker Hub..."
           docker tag lurker:latest ${{ secrets.DOCKER_USERNAME }}/lurker:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/lurker:latest
+
+      - name: Publish Docker Image to GitHub Container Registry
+        run: |
+          echo "Publishing Docker image to GitHub Container Registry..."
+          docker tag lurker:latest ghcr.io/${{ github.repository_owner }}/lurker:latest
+          docker push ghcr.io/${{ github.repository_owner }}/lurker:latest

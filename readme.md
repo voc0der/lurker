@@ -192,9 +192,7 @@ nix build .#lurker  # build the thing
 
 ### todo
 
-**upcoming features**
-
-**completed**
+**completed features**
 - [x] highlights for op, sticky etc.
 - [x] open in reddit link
 - [x] service worker for offline PWA support
