@@ -570,7 +570,9 @@ router.get("/auth/oidc/login", async (req, res) => {
     res.cookie("oidc_redirect", ra, cookieOptions);
 
     logger.info(`[OIDC] Redirecting to IdP authorization URL`);
-    return res.redirect(authorizationUrl);
+    logger.info(`[OIDC] Response status will be: 302, Location: ${authorizationUrl}`);
+    res.redirect(authorizationUrl);
+    logger.info(`[OIDC] Redirect response sent`);
   } catch (err) {
     logger.error("[OIDC] Failed to start OIDC login:", err);
     return res.redirect("/login?bypass_oidc=true&message=Failed to start OIDC login");
@@ -614,10 +616,9 @@ router.get("/auth/oidc/callback", async (req, res) => {
       code_verifier,
     });
 
-    const sub = claims?.sub;
-    if (!sub) {
-      return res.redirect("/login?bypass_oidc=true&message=OIDC provider did not return sub");
-    }
+    // handleCallback already validates that sub exists, so we can use it directly
+    const sub = claims.sub;
+    logger.info(`[OIDC] Callback successful for sub: ${sub}`);
 
     const groups = oidc.extractGroupsFromClaims(claims);
     if (!oidc.isAllowedByGroups(groups)) {

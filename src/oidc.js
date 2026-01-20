@@ -286,8 +286,21 @@ async function handleCallback(req, { state, nonce, code_verifier } = {}) {
     expectedNonce: nonce,
   }, _clientAuth);
 
-  // Extract claims from ID token
-  const claims = tokenSet.claims || {};
+  // Extract claims from ID token (claims() is a method in openid-client v6)
+  let claims = {};
+  try {
+    claims = tokenSet.claims() || {};
+    logger.debug(`[OIDC] Extracted claims from ID token: ${JSON.stringify({ sub: claims.sub, email: claims.email, preferred_username: claims.preferred_username })}`);
+  } catch (err) {
+    logger.error('[OIDC] Failed to extract claims from ID token:', err);
+    logger.error(`[OIDC] tokenSet keys: ${Object.keys(tokenSet).join(', ')}`);
+  }
+
+  const sub = claims?.sub;
+  if (!sub) {
+    logger.error(`[OIDC] Missing sub claim. Available claims: ${Object.keys(claims).join(', ')}`);
+    throw new Error('OIDC provider did not return sub claim');
+  }
 
   return { tokenSet, claims };
 }
