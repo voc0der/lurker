@@ -308,27 +308,42 @@ async function handleCallback(req, { state, nonce, code_verifier } = {}) {
 function extractGroupsFromClaims(claims) {
   const groupClaim = process.env.OIDC_GROUP_CLAIM || process.env.OIDC_ADMIN_CLAIM || 'groups';
   const value = _getClaimByPath(claims, groupClaim);
-  return _normalizeGroups(value);
+  const groups = _normalizeGroups(value);
+  logger.debug(`[OIDC] Extracted groups from claim '${groupClaim}': ${JSON.stringify(groups)}`);
+  return groups;
 }
 
 function isAllowedByGroups(groups) {
   const allowCsv = process.env.OIDC_ALLOWED_GROUPS;
-  if (!allowCsv || String(allowCsv).trim() === '') return true;
+  if (!allowCsv || String(allowCsv).trim() === '') {
+    logger.debug('[OIDC] No OIDC_ALLOWED_GROUPS set, allowing all groups');
+    return true;
+  }
   const allowed = _splitCsv(allowCsv);
   if (allowed.length === 0) return true;
-  return groups.some((g) => allowed.includes(g));
+
+  // Case-insensitive comparison
+  const allowedLower = allowed.map(g => g.toLowerCase());
+  const groupsLower = groups.map(g => g.toLowerCase());
+  const isAllowed = groupsLower.some((g) => allowedLower.includes(g));
+
+  logger.info(`[OIDC] Group authorization check: user groups=${JSON.stringify(groups)}, allowed=${JSON.stringify(allowed)}, result=${isAllowed}`);
+  return isAllowed;
 }
 
 function isAdminFromClaims(claims, groups) {
   const claimPath = process.env.OIDC_ADMIN_CLAIM || (process.env.OIDC_GROUP_CLAIM || 'groups');
-  const adminValue = process.env.OIDC_ADMIN_VALUE || 'admin';
+  const adminValue = (process.env.OIDC_ADMIN_VALUE || 'admin').toLowerCase();
 
   const v = _getClaimByPath(claims, claimPath);
   const normalized = _normalizeGroups(v);
 
   // If admin claim path isn't actually groups, still allow groupClaim to drive admin if desired.
-  const combined = new Set([...(groups || []), ...normalized]);
-  return combined.has(adminValue);
+  const combined = [...(groups || []), ...normalized].map(g => g.toLowerCase());
+  const isAdmin = combined.includes(adminValue);
+
+  logger.debug(`[OIDC] Admin check: groups=${JSON.stringify(groups)}, adminValue=${adminValue}, result=${isAdmin}`);
+  return isAdmin;
 }
 
 function resolveUsernameFromClaims(claims) {
