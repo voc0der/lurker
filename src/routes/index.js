@@ -552,7 +552,7 @@ router.get("/auth/oidc/login", async (req, res) => {
       redirectAfterLogin,
     });
 
-    logger.info(`[OIDC] Authorization URL generated: ${authorizationUrl.substring(0, 100)}...`);
+    logger.info(`[OIDC] Authorization URL generated: ${authorizationUrl}`);
     logger.debug(`[OIDC] Setting cookies: state, nonce, verifier (length: ${code_verifier.length}), redirect: ${ra}`);
 
     // IMPORTANT: SameSite must be Lax (not Strict) so cookies are sent on the cross-site callback redirect.
