@@ -537,16 +537,23 @@ router.post("/register", validateInviteToken, async (req, res) => {
 
 // OIDC routes (PKCE)
 router.get("/auth/oidc/login", async (req, res) => {
+  logger.info(`[OIDC] /auth/oidc/login hit, OIDC enabled: ${oidc.isOIDCEnabled()}`);
+
   if (!oidc.isOIDCEnabled()) {
-    return res.redirect("/login?message=OIDC not configured");
+    logger.warn("[OIDC] OIDC not enabled, redirecting to login with bypass");
+    return res.redirect("/login?bypass_oidc=true&message=OIDC not configured");
   }
 
   const redirectAfterLogin = req.query.redirect || "/";
+  logger.info(`[OIDC] Generating authorization URL, redirectAfterLogin: ${redirectAfterLogin}`);
 
   try {
     const { authorizationUrl, state, nonce, code_verifier, redirectAfterLogin: ra } = await oidc.getAuthorizationUrl({
       redirectAfterLogin,
     });
+
+    logger.info(`[OIDC] Authorization URL generated: ${authorizationUrl.substring(0, 100)}...`);
+    logger.debug(`[OIDC] Setting cookies: state, nonce, verifier (length: ${code_verifier.length}), redirect: ${ra}`);
 
     // IMPORTANT: SameSite must be Lax (not Strict) so cookies are sent on the cross-site callback redirect.
     const cookieOptions = {
@@ -562,16 +569,17 @@ router.get("/auth/oidc/login", async (req, res) => {
     res.cookie("oidc_verifier", code_verifier, cookieOptions);
     res.cookie("oidc_redirect", ra, cookieOptions);
 
+    logger.info(`[OIDC] Redirecting to IdP authorization URL`);
     return res.redirect(authorizationUrl);
   } catch (err) {
-    logger.error("Failed to start OIDC login", err);
-    return res.redirect("/login?message=Failed to start OIDC login");
+    logger.error("[OIDC] Failed to start OIDC login:", err);
+    return res.redirect("/login?bypass_oidc=true&message=Failed to start OIDC login");
   }
 });
 
 router.get("/auth/oidc/callback", async (req, res) => {
   if (!oidc.isOIDCEnabled()) {
-    return res.redirect("/login?message=OIDC not configured");
+    return res.redirect("/login?bypass_oidc=true&message=OIDC not configured");
   }
 
   const state = req.cookies?.oidc_state;
@@ -721,6 +729,7 @@ router.get("/login", async (req, res, next) => {
 
   // Priority 1: OIDC
   if (oidc.isOIDCEnabled() && !bypassOidc) {
+    logger.info(`[LOGIN] OIDC enabled, redirecting to /auth/oidc/login with redirect=${redirectTo}`);
     return res.redirect(`/auth/oidc/login?redirect=${encodeURIComponent(redirectTo)}`);
   }
 

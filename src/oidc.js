@@ -110,6 +110,10 @@ async function initializeOIDC({ jwtKey } = {}) {
   }
 
   try {
+    logger.info(`[OIDC] Initializing with issuer: ${issuerUrl}`);
+    logger.info(`[OIDC] Client ID: ${_clientId}`);
+    logger.info(`[OIDC] Redirect URI: ${_redirectUri}`);
+
     if (!_openid) {
       _openid = await import('openid-client');
       logger.debug('openid-client v6 imported');
@@ -122,6 +126,7 @@ async function initializeOIDC({ jwtKey } = {}) {
     }
 
     _config = await discovery(new URL(issuerUrl), _clientId, _clientSecret);
+    logger.info(`[OIDC] Discovery completed successfully`);
 
     // Determine client authentication method
     // Default to client_secret_post (configure IDP to support this method)

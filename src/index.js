@@ -57,6 +57,8 @@ async function bootstrap() {
 			message: "Too many requests from this IP, please try again later.",
 			standardHeaders: true,
 			legacyHeaders: false,
+			// Skip X-Forwarded-For validation when not behind a reverse proxy
+			validate: { xForwardedForHeader: false },
 		}),
 	);
 
