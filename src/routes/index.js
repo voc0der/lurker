@@ -108,14 +108,43 @@ router.get("/", authenticateToken, async (req, res) => {
 		.query("SELECT * FROM subscriptions WHERE user_id = $id")
 		.all({ id: req.user.id });
 
-	const qs = req.query ? "?" + new URLSearchParams(req.query).toString() : "";
-
-	if (subs.length === 0) {
-		res.redirect(`/r/all${qs}`);
-	} else {
-		const p = subs.map((s) => s.subreddit).join("+");
-		res.redirect(`/r/${p}${qs}`);
+	const query = req.query ? req.query : {};
+	if (!query.sort) {
+		query.sort = "hot";
 	}
+	if (!query.view) {
+		query.view = "compact";
+	}
+
+	// If no subscriptions, redirect to /r/all
+	if (subs.length === 0) {
+		const qs = "?" + new URLSearchParams(query).toString();
+		return res.redirect(`/r/all${qs}`);
+	}
+
+	// Build multi-reddit internally (don't put in URL)
+	const subreddit = subs.map((s) => s.subreddit).join("+");
+	const isMulti = true;
+
+	const postsReq = G.getSubmissions(query.sort, subreddit, query);
+	const aboutReq = G.getSubreddit(subreddit);
+	const [posts, about] = await Promise.all([postsReq, aboutReq]);
+
+	if (query.view == "card" && posts && posts.posts) {
+		posts.posts.forEach(unescape_selftext);
+	}
+
+	res.render("index", {
+		subreddit: "home",
+		posts,
+		about,
+		query,
+		isMulti,
+		user: req.user,
+		isSubbed: false,
+		currentUrl: req.url,
+		...commonRenderOptions,
+	});
 });
 
 // GET /r/:id
@@ -159,13 +188,21 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
 
 // API endpoint to fetch more posts for infinite scroll
 router.get("/api/r/:subreddit/posts", authenticateToken, async (req, res) => {
-	const subreddit = req.params.subreddit;
+	let subreddit = req.params.subreddit;
 	const query = req.query ? req.query : {};
 	if (!query.sort) {
 		query.sort = "hot";
 	}
 	if (!query.view) {
 		query.view = "compact";
+	}
+
+	// Handle "home" as a special case - build multi-reddit from subscriptions
+	if (subreddit === "home") {
+		const subs = db
+			.query("SELECT * FROM subscriptions WHERE user_id = $id")
+			.all({ id: req.user.id });
+		subreddit = subs.map((s) => s.subreddit).join("+");
 	}
 
 	const posts = await G.getSubmissions(query.sort, subreddit, query);
