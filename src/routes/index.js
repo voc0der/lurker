@@ -125,6 +125,7 @@ router.get("/", authenticateToken, async (req, res) => {
 	// Build multi-reddit internally (don't put in URL)
 	const subreddit = subs.map((s) => s.subreddit).join("+");
 	const isMulti = true;
+	const isHomePage = true; // Flag to indicate this is the home page
 
 	const postsReq = G.getSubmissions(query.sort, subreddit, query);
 	const aboutReq = G.getSubreddit(subreddit);
@@ -135,11 +136,12 @@ router.get("/", authenticateToken, async (req, res) => {
 	}
 
 	res.render("index", {
-		subreddit: "home",
+		subreddit,
 		posts,
 		about,
 		query,
 		isMulti,
+		isHomePage,
 		user: req.user,
 		isSubbed: false,
 		currentUrl: req.url,
