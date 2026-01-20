@@ -1223,3 +1223,115 @@ body[data-classic-layout="1"] .domain {
     flex-direction: column;
   }
 }
+
+/* === Offline Page Styles === */
+
+.offline-container {
+  max-width: 600px;
+  margin: 60px auto;
+  text-align: center;
+  padding: 20px;
+}
+
+.offline-container h1 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: var(--text-color);
+}
+
+.offline-message {
+  font-size: 1.1rem;
+  color: var(--text-color-muted);
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.offline-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.offline-actions button,
+.offline-actions a {
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.offline-actions button {
+  background-color: var(--accent);
+  color: var(--bg-color);
+  border: none;
+}
+
+.offline-actions button:hover {
+  opacity: 0.8;
+}
+
+.offline-actions a {
+  background-color: var(--bg-color-muted);
+  color: var(--text-color);
+  border: 1px solid var(--bg-color-muted);
+}
+
+.offline-actions a:hover {
+  background-color: var(--bg-color);
+}
+
+.offline-info {
+  margin-top: 40px;
+  padding: 20px;
+  background-color: var(--bg-color-muted);
+  border-radius: 4px;
+  text-align: left;
+}
+
+.offline-info p {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: var(--text-color);
+}
+
+.offline-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.offline-info li {
+  padding: 8px 0;
+  color: var(--text-color-muted);
+}
+
+.offline-info li:before {
+  content: "✓ ";
+  color: var(--accent);
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+@media (max-width: 767px) {
+  .offline-container {
+    margin: 30px auto;
+    padding: 15px;
+  }
+
+  .offline-container h1 {
+    font-size: 1.5rem;
+  }
+
+  .offline-actions {
+    flex-direction: column;
+  }
+
+  .offline-actions button,
+  .offline-actions a {
+    width: 100%;
+  }
+}

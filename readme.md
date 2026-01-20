@@ -193,12 +193,11 @@ nix build .#lurker  # build the thing
 ### todo
 
 **upcoming features**
-- [ ] avoid js to toggle details in views/index.pug
 - [ ] highlights for op, sticky etc.
 - [ ] open in reddit/reply in reddit link
-- [ ] service worker for offline PWA support
 
 **completed**
+- [x] service worker for offline PWA support
 - [x] subscription manager: bulk add, search/filter, unsubscribe all
 - [x] support crossposts
 - [x] PWA support (manifest, icons, meta tags)

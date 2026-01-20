@@ -911,6 +911,12 @@ router.get("/manifest.json", (_req, res) => {
 	res.json(manifest);
 });
 
+// Offline fallback page
+router.get("/offline", (req, res) => {
+	const user = req.user || { themePreference: 'auto', useClassicLayout: 0 };
+	res.render("offline", { user });
+});
+
 module.exports = router;
 
 function unescape_submission(response) {

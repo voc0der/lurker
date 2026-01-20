@@ -18,6 +18,20 @@ mixin head(title)
     link(rel="apple-touch-icon" sizes="152x152" href="/icon-152.png")
     link(rel="apple-touch-icon" sizes="180x180" href="/icon-180.png")
 
+    //- Service Worker Registration
+    script.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then((registration) => {
+              console.log('Service Worker registered:', registration.scope);
+            })
+            .catch((error) => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+
     //- Styles
     link(rel="stylesheet", href="/styles.css")
     if theme

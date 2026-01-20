@@ -1,0 +1,27 @@
+include ../mixins/header
+include ../mixins/head
+
+doctype html
+html
+  +head("offline")
+  body(data-theme=user.themePreference data-classic-layout=user.useClassicLayout)
+    main#content
+      +header(user)
+      div.hero
+        div.offline-container
+          h1 You're Offline
+          p.offline-message
+            | It looks like you've lost your internet connection.
+            br
+            | Check your connection and try again.
+
+          div.offline-actions
+            button(onclick="window.location.reload()") Retry
+            a(href="/") Go Home
+
+          div.offline-info
+            p Some features may still work:
+            ul
+              li Previously viewed pages (if cached)
+              li Your subscriptions list
+              li Settings and preferences
