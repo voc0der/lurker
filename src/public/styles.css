@@ -1011,3 +1011,215 @@ body[data-classic-layout="1"] .domain {
     max-height: 300px;
   }
 }
+
+/* === Subscription Management Styles === */
+
+.subs-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.subs-header h1 {
+  margin: 0;
+}
+
+.add-bulk-btn {
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 8px 16px;
+  background-color: var(--accent);
+  color: var(--bg-color);
+  cursor: pointer;
+  border-radius: 4px;
+  border: none;
+}
+
+.add-bulk-btn:hover {
+  opacity: 0.8;
+}
+
+/* Bulk add section */
+#bulk-add-container {
+  margin-bottom: 20px;
+  border: 1px solid var(--bg-color-muted);
+  border-radius: 4px;
+  padding: 15px;
+}
+
+.bulk-add-label {
+  margin-bottom: 10px;
+  color: var(--text-color-muted);
+  font-size: 0.9rem;
+}
+
+#bulk-input {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--bg-color-muted);
+  border-radius: 4px;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: inherit;
+  resize: vertical;
+}
+
+#bulk-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+  min-height: 30px;
+}
+
+.bulk-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background-color: var(--bg-color-muted);
+  color: var(--text-color);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.bulk-tag button {
+  background: none;
+  border: none;
+  color: var(--text-color-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.bulk-tag button:hover {
+  color: var(--error-text-color);
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.bulk-actions button {
+  flex: 1;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  border: none;
+  font-family: inherit;
+}
+
+#bulk-add-btn {
+  background-color: var(--accent);
+  color: var(--bg-color);
+}
+
+#bulk-add-btn:disabled {
+  background-color: var(--bg-color-muted);
+  color: var(--text-color-muted);
+  cursor: not-allowed;
+}
+
+#bulk-clear-btn {
+  background-color: var(--bg-color-muted);
+  color: var(--text-color);
+}
+
+#bulk-feedback {
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.bulk-feedback-success {
+  background-color: var(--sticky-color);
+  color: var(--text-color);
+}
+
+.bulk-feedback-error {
+  background-color: var(--error-text-color);
+  color: var(--bg-color);
+}
+
+/* Subscription controls */
+.subs-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+#subs-filter {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--bg-color-muted);
+  border-radius: 4px;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: inherit;
+}
+
+.danger-btn {
+  background-color: var(--error-text-color);
+  color: var(--bg-color);
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  border: none;
+  font-family: inherit;
+}
+
+.danger-btn:hover {
+  opacity: 0.8;
+}
+
+/* Subscriptions list */
+#subs-list {
+  width: 100%;
+}
+
+.empty-state {
+  color: var(--text-color-muted);
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.empty-state a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.empty-state a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  .subs-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .subs-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .subs-controls button {
+    width: 100%;
+  }
+
+  .bulk-actions {
+    flex-direction: column;
+  }
+}

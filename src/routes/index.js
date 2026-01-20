@@ -768,6 +768,66 @@ router.post("/unsubscribe", authenticateToken, async (req, res) => {
 	}
 });
 
+// Unsubscribe from all subreddits
+router.post("/unsubscribe-all", authenticateToken, async (req, res) => {
+	const user = req.user;
+	try {
+		const result = db
+			.query("DELETE FROM subscriptions WHERE user_id = $id")
+			.run({ id: user.id });
+
+		res.status(200).json({
+			message: "All subscriptions removed",
+			count: result.changes,
+		});
+	} catch (error) {
+		console.error("Error removing all subscriptions:", error);
+		res.status(500).send("Failed to remove subscriptions");
+	}
+});
+
+// Bulk subscribe to multiple subreddits
+router.post("/subscribe-bulk", authenticateToken, async (req, res) => {
+	const { subreddits } = req.body;
+	const user = req.user;
+
+	if (!Array.isArray(subreddits) || subreddits.length === 0) {
+		return res.status(400).json({
+			error: "Invalid request: subreddits must be a non-empty array",
+		});
+	}
+
+	const results = {
+		added: [],
+		skipped: [], // Already subscribed
+		failed: [],
+	};
+
+	for (const subreddit of subreddits) {
+		try {
+			const existingSubscription = db
+				.query(
+					"SELECT * FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit",
+				)
+				.get({ id: user.id, subreddit });
+
+			if (existingSubscription) {
+				results.skipped.push(subreddit);
+			} else {
+				db.query(
+					"INSERT INTO subscriptions (user_id, subreddit) VALUES ($id, $subreddit)",
+				).run({ id: user.id, subreddit });
+				results.added.push(subreddit);
+			}
+		} catch (error) {
+			console.error(`Error subscribing to ${subreddit}:`, error);
+			results.failed.push(subreddit);
+		}
+	}
+
+	res.status(200).json(results);
+});
+
 // PWA Support Routes
 const { generateIcon } = require("../utils/iconGenerator");
 

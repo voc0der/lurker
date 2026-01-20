@@ -11,17 +11,42 @@ html
     main#content
       +header(user)
       div.hero
-        h1 subscriptions
-        p
-          each s in subs 
-            - var subreddit = s.subreddit
-            - var isSubbed = true
-            div.sub-title
-              h4
-                a(href=`/r/${subreddit}?sort=${sortQuery}&view=${viewQuery}`) 
-                  | r/#{subreddit}
-              div#button-container
-                if isSubbed
-                  button(onclick=`toggleSub('${subreddit}')` id=`thinger_${subreddit}`) unsubscribe
-                else
-                  button(onclick=`toggleSub('${subreddit}')` id=`thinger_${subreddit}`) subscribe
+        div.subs-header
+          h1 subscriptions
+          button.add-bulk-btn(onclick="toggleBulkAdd()" title="Bulk add subscriptions") ++
+
+        // Bulk add section (initially hidden)
+        div#bulk-add-container(style="display: none;")
+          p.bulk-add-label Paste subreddit names (one per line or comma-separated):
+          textarea#bulk-input(placeholder="programming, webdev, technology...")
+          div#bulk-tags-container
+          div.bulk-actions
+            button#bulk-add-btn(onclick="processBulkAdd()") Add Subscriptions
+            button#bulk-clear-btn(onclick="clearBulkAdd()") Clear
+          div#bulk-feedback
+
+        // Search/filter bar and controls
+        if subs && subs.length > 0
+          div.subs-controls
+            input#subs-filter(type="text" placeholder="Filter subscriptions..." oninput="filterSubs()")
+            button.danger-btn(onclick="confirmUnsubscribeAll()") Unsubscribe All
+
+        // Subscriptions list
+        div#subs-list
+          if subs && subs.length > 0
+            p
+              each s in subs
+                - var subreddit = s.subreddit
+                - var isSubbed = true
+                div.sub-title(data-subreddit=subreddit)
+                  h4
+                    a(href=`/r/${subreddit}?sort=${sortQuery}&view=${viewQuery}`)
+                      | r/#{subreddit}
+                  div#button-container
+                    if isSubbed
+                      button(onclick=`toggleSub('${subreddit}')` id=`thinger_${subreddit}`) unsubscribe
+                    else
+                      button(onclick=`toggleSub('${subreddit}')` id=`thinger_${subreddit}`) subscribe
+          else
+            p.empty-state No subscriptions yet.
+              a(href="/sub-search") Search for subreddits
