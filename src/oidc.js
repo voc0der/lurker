@@ -290,6 +290,7 @@ async function handleCallback(req, { state, nonce, code_verifier } = {}) {
   let claims = {};
   try {
     claims = tokenSet.claims() || {};
+    logger.debug(`[OIDC] ID token claim keys: ${Object.keys(claims).join(', ')}`);
     logger.debug(`[OIDC] Extracted claims from ID token: ${JSON.stringify({ sub: claims.sub, email: claims.email, preferred_username: claims.preferred_username })}`);
   } catch (err) {
     logger.error('[OIDC] Failed to extract claims from ID token:', err);
@@ -302,7 +303,31 @@ async function handleCallback(req, { state, nonce, code_verifier } = {}) {
     throw new Error('OIDC provider did not return sub claim');
   }
 
-  return { tokenSet, claims };
+  // Fetch userinfo to get additional claims (like groups) that may not be in ID token
+  let userinfo = {};
+  if (tokenSet.access_token) {
+    try {
+      const fetchUserInfo = _openid.fetchUserInfo || _openid.default?.fetchUserInfo;
+      if (!fetchUserInfo) {
+        logger.warn('[OIDC] fetchUserInfo not available in openid-client');
+      } else {
+        userinfo = await fetchUserInfo(_config, tokenSet.access_token, tokenSet.claims()?.sub);
+        logger.debug(`[OIDC] UserInfo claim keys: ${Object.keys(userinfo).join(', ')}`);
+
+        const groupClaim = process.env.OIDC_GROUP_CLAIM || 'groups';
+        logger.debug(`[OIDC] '${groupClaim}' from ID token: ${JSON.stringify(claims[groupClaim])}`);
+        logger.debug(`[OIDC] '${groupClaim}' from UserInfo: ${JSON.stringify(userinfo[groupClaim])}`);
+      }
+    } catch (err) {
+      logger.warn('[OIDC] Failed to fetch userinfo (continuing without it):', err.message);
+    }
+  }
+
+  // Merge userinfo into claims (userinfo takes precedence for overlapping keys)
+  const mergedClaims = { ...claims, ...userinfo };
+  logger.debug(`[OIDC] Merged claim keys: ${Object.keys(mergedClaims).join(', ')}`);
+
+  return { tokenSet, claims: mergedClaims };
 }
 
 function extractGroupsFromClaims(claims) {
