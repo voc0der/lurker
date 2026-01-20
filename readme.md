@@ -193,10 +193,10 @@ nix build .#lurker  # build the thing
 ### todo
 
 **upcoming features**
-- [ ] highlights for op, sticky etc.
-- [ ] open in reddit/reply in reddit link
 
 **completed**
+- [x] highlights for op, sticky etc.
+- [x] open in reddit link
 - [x] service worker for offline PWA support
 - [x] subscription manager: bulk add, search/filter, unsubscribe all
 - [x] support crossposts
