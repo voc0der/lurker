@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  lurker:
+    image: ghcr.io/voc0der/lurker:latest
+    container_name: lurker
+    environment:
+      # --- Docker user/group for file ownership inside /data (defaults shown) ---
+      PUID: "1000"
+      PGID: "1000"
+
+      # --- Server configuration (defaults shown) ---
+      LURKER_PORT: "3000"
+      HTTP_BINDING: "0.0.0.0"
+
+      # --- HTTPS (optional) ---
+      # If BOTH paths are set (non-empty), the app will start an HTTPS server.
+      # Leave blank to use HTTP (default).
+      LURKER_SSL_CERT_PATH: ""
+      LURKER_SSL_KEY_PATH: ""
+
+      # --- Application settings ---
+      LOG_LEVEL: "info"          # debug, info (default), warn, error
+      RATE_LIMIT: "100"          # max requests per 15-minute window per IP (default: 100)
+      LURKER_THEME: ""           # optional; name of a CSS file in src/public without ".css" (default: unset)
+
+      # --- Authentication & security ---
+      JWT_SECRET_KEY: ""         # auto-generated if unset; set to keep sessions valid across restarts
+      REMOTE_HEADER_LOGIN: ""    # default: "false". Set to "true" to enable Remote Header SSO
+      ADMIN_GROUP: "admin"       # default: admin (used when REMOTE_HEADER_LOGIN is enabled)
+      REVERSE_PROXY_WHITELIST: ""  # comma-separated trusted proxy IPs (default: unset)
+
+      # --- OIDC (OpenID Connect + PKCE) ---
+      OIDC_ENABLED: ""           # default: "false". Set to "true" to enable OIDC
+      OIDC_ISSUER_URL: ""        # required if OIDC_ENABLED=true (provider discovery URL)
+      OIDC_CLIENT_ID: ""         # required if OIDC_ENABLED=true
+      OIDC_CLIENT_SECRET: ""     # required if OIDC_ENABLED=true
+      OIDC_REDIRECT_URI: ""      # required if OIDC_ENABLED=true (e.g. https://lurker.example.com/auth/oidc/callback)
+      OIDC_SCOPE: "openid profile email"  # default: "openid profile email"
+      OIDC_CLIENT_AUTH_METHOD: "client_secret_post"  # default: client_secret_post
+      OIDC_AUTO_REGISTER: "true"          # default: true
+      OIDC_FIRST_USER_ADMIN: "true"       # default: true (first ever user becomes admin)
+      OIDC_ADMIN_CLAIM: "groups"          # default: groups (supports dotted paths like "realm_access.roles")
+      OIDC_ADMIN_VALUE: "admin"           # default: admin
+      OIDC_GROUP_CLAIM: "groups"          # default: groups (supports dotted paths / [index])
+      OIDC_ALLOWED_GROUPS: ""             # optional; comma-separated list of groups required to log in / auto-register
+
+    volumes:
+      # lurker stores data in /data
+      - ./lurker-data:/data
+    ports:
+      # If you change LURKER_PORT, update the container port here too (HOST:CONTAINER).
+      - "3000:3000"
+    restart: unless-stopped

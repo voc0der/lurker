@@ -1,6 +1,5 @@
 ### lurker
 
-This is a fork of https://github.com/oppiliappan/lurker/ and I respect their work!
 
 lurker is a selfhostable, privacy-focused reddit client with SSO support,
 user preferences, and PWA capabilities. it is better than old-reddit because:
@@ -62,7 +61,7 @@ my use.
 you can run lurker as a systemd service on nixos:
 
 ```nix
-inputs.lurker.url= "git+https://git.peppe.rs/web/lurker";
+inputs.lurker.url= "git+https://github.com/voc0der/lurker";
   .
   .
   .
@@ -76,16 +75,16 @@ or with the docker image:
 
 ```bash
 # pull the latest image from gh container registry
-$ docker pull ghcr.io/oppiliappan/lurker:latest
+$ docker pull ghcr.io/voc0der/lurker:latest
 
 REPOSITORY                   TAG       IMAGE ID       CREATED        SIZE
-ghcr.io/oppiliappan/lurker   latest    ba3733164889   ???            227MB
+ghcr.io/voc0der/lurker   latest    ba3733164889   ???            227MB
 
 # start lurker in a container
 #
 # lurker stores data in /data,
 # so create a volume on the host accordingly:
-$ docker run -v /your/host/lurker-data:/data -p 3000 ghcr.io/oppiliappan/lurker:latest
+$ docker run -v /your/host/lurker-data:/data -p 3000 ghcr.io/voc0der/lurker:latest
 ```
 
 or with docker compose:
@@ -94,7 +93,7 @@ or with docker compose:
 version: '3'
 services:
   lurker:
-    image: ghcr.io/oppiliappan/lurker:latest
+    image: ghcr.io/voc0der/lurker:latest
     container_name: lurker
     environment:
       - PUID=1000              # user ID for file permissions
@@ -109,6 +108,9 @@ services:
       - "3000:3000"
     restart: unless-stopped
 ```
+
+See `docker-compose.yaml` for a full compose example with **all** environment variables (and their defaults).
+
 
 or with just [bun](https://bun.sh/):
 
@@ -215,3 +217,5 @@ nix build .#lurker  # build the thing
 - [x] set home to sum of subs
 - [x] styles for info-containers
 - [x] support 'more comments'
+
+This is a fork of https://github.com/oppiliappan/lurker/ and I respect their work!
