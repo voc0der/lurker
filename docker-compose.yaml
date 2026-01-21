@@ -1,5 +1,4 @@
-version: "3.8"
-
+---
 services:
   lurker:
     image: ghcr.io/voc0der/lurker:latest

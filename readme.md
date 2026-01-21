@@ -90,7 +90,7 @@ $ docker run -v /your/host/lurker-data:/data -p 3000 ghcr.io/voc0der/lurker:late
 or with docker compose:
 
 ```yaml
-version: '3'
+---
 services:
   lurker:
     image: ghcr.io/voc0der/lurker:latest
