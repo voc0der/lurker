@@ -1,7 +1,7 @@
 ---
 services:
   lurker:
-    image: ghcr.io/voc0der/lurker:latest
+    image: ghcr.io/oppiliappan/lurker:latest
     container_name: lurker
     environment:
       # --- Docker user/group for file ownership inside /data (defaults shown) ---
