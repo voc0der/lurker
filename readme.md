@@ -25,13 +25,15 @@ me if you would like an invite.
 - **user experience**
   - minimal use of client-side javascript
   - account-based subscription system
-  - per-user preferences (infinite scroll, theme, layout)
+  - per-user preferences (infinite scroll, theme, layout, thumbnail quality)
   - "Never Ending Reddit" infinite scroll option
   - Classic RES-style compact layout for desktop
   - multiple themes: auto (system), light, dark, RES night mode
+  - high-resolution thumbnails (RES-quality, with low-bandwidth option)
   - Progressive Web App (PWA) - installable on mobile devices
 
 - **content & navigation**
+  - quick access to /r/all and /r/popular from navigation
   - pagination with infinite scroll option
   - comment collapsing, jump-to-next/prev comment
   - crosspost support
@@ -132,6 +134,7 @@ it to your friends!
 each user can customize their experience via the dashboard:
 - **Never Ending Reddit**: enable infinite scroll instead of pagination
 - **Classic RES-style Layout**: toggle compact desktop layout (thumbnails on left)
+- **High Resolution Thumbnails**: use RES-quality preview images (640x640+) instead of low-res thumbnails (70x70), can be disabled for low bandwidth connections
 - **Theme Preference**: choose between auto (system), light, dark, or RES night mode
 
 **PWA installation**

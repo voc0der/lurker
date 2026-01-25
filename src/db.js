@@ -90,7 +90,12 @@ runMigration("add-classic-layout-column", () => {
   `).run();
 });
 
-
+runMigration("add-high-res-thumbnails-column", () => {
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN highResThumbnails INTEGER DEFAULT 1
+  `).run();
+});
 
 runMigration("add-oidc-support", () => {
 	// Core OIDC fields

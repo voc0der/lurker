@@ -23,7 +23,7 @@
       || imgRe.test(p.url);
   }
 -
-  function postThumbnail(p) {
+  function postThumbnail(p, useHighRes) {
     p = getPostData(p);
     if (p.over_18) {
       return "/nsfw.svg";
@@ -32,6 +32,22 @@
     } else if (p.thumbnail == "image" || p.thumbnail == "") {
       return p.url;
     } else {
+      // Use higher quality preview images when available (like RES does)
+      // This provides much better quality than the low-res p.thumbnail (70x70 or 140x140)
+      // Only use high-res if user preference is enabled (default: true)
+      if (useHighRes && p.preview && p.preview.images && p.preview.images.length > 0) {
+        const preview = p.preview.images[0];
+        // Try to get a medium-high resolution preview (640x640 is usually index 3-4)
+        // Falls back to source if resolutions not available
+        if (preview.resolutions && preview.resolutions.length > 0) {
+          // Get the highest resolution available, typically 640x640 or 1080x1080
+          const bestRes = preview.resolutions[preview.resolutions.length - 1];
+          return bestRes.url.replace(/&amp;/g, '&');
+        } else if (preview.source && preview.source.url) {
+          return preview.source.url.replace(/&amp;/g, '&');
+        }
+      }
+      // Fallback to original thumbnail if no preview available or high-res disabled
       return p.thumbnail;
     }
   }

@@ -28,6 +28,11 @@ html
               | &nbsp;Use Classic RES-style Layout (desktop)
 
           div(style="margin-top: 15px;")
+            label(for="pref-high-res-thumbnails")
+              input(type="checkbox" id="pref-high-res-thumbnails" name="highResThumbnails" value="1" checked=(user.highResThumbnails === 1))
+              | &nbsp;Use High Resolution Thumbnails (disable for low bandwidth)
+
+          div(style="margin-top: 15px;")
             label(for="pref-theme" style="display: block; margin-bottom: 5px;") Theme Preference:
             select(id="pref-theme" name="themePreference" style="padding: 5px; background-color: var(--bg-color-muted); color: var(--text-color); border: 1px solid var(--text-color-muted); border-radius: 4px;")
               option(value="auto" selected=(user.themePreference === 'auto')) Auto (system preference)
