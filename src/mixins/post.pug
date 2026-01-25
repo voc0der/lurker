@@ -47,8 +47,10 @@ mixin post(p, currentUrl)
               - var url = postThumbnail(p, useHighRes)
               img(src=url onclick=onclick)
             else if isPostVideo(p)
+              - var useHighRes = !user || user.highResThumbnails === undefined || user.highResThumbnails === 1
               - var decodedVideos = decodePostVideoUrls(p)
-              video(data-dashjs-player="" playsinline="" autoplay="" muted="" onclick=`toggleDetails('${p.id}')` src=decodedVideos[3] poster=decodedVideos[4] width="100px" height="100px")
+              - var videoSrc = useHighRes ? decodedVideos[2] : decodedVideos[3]
+              video(playsinline="" autoplay="" muted="" onclick=`toggleDetails('${p.id}')` src=videoSrc poster=decodedVideos[4])
             else if isPostLink(p)
               a(href=p.url)
                 | ↗

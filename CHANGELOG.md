@@ -19,6 +19,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Enhanced navigation header to include popular subreddit access
 - Improved image quality across all post listings
 
+### Fixed
+- Video preview quality in compact view now uses fallback_url (full quality) instead of scrubber_url (low quality)
+- Video previews now respect the same `highResThumbnails` user preference toggle
+  - High-res enabled: uses fallback_url (full quality MP4)
+  - High-res disabled: uses scrubber_url (low quality for bandwidth savings)
+- Removed hardcoded 100px x 100px dimensions from video preview, now responsive via CSS
+
 ### Technical
 - Database migration: add-high-res-thumbnails-column
 - Modified files: header.pug, postUtils.pug, post.pug, dashboard.pug, db.js, routes/index.js
