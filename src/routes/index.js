@@ -464,8 +464,8 @@ router.get("/delete-invite/:id", authenticateToken, async (req, res) => {
 });
 
 // GET /media
-router.get("/media/*", authenticateToken, async (req, res) => {
-	const url = req.params[0];
+router.get("/media/:url(*)", authenticateToken, async (req, res) => {
+	const url = req.params.url;
 	const ext = url.split(".").pop().toLowerCase();
 	const kind = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)
 		? "img"
