@@ -16,6 +16,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
+        with:
+          # Ensure line endings aren't modified during checkout
+          autocrlf: false
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
