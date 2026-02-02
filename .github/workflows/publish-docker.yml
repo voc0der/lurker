@@ -23,11 +23,17 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Attempt to Build Docker Image
         id: build
         run: |
           set -e
-          docker build -t lurker:latest . || echo "BUILD_FAILED=true" >> $GITHUB_ENV
+          docker buildx build --platform linux/amd64 -t lurker:latest --load . || echo "BUILD_FAILED=true" >> $GITHUB_ENV
 
       - name: Extract new hash from the error logs and update flake.nix
         run: |
@@ -76,7 +82,7 @@ jobs:
         run: |
           if [ "$FLAKE_UPDATED" == "true" ]; then
             echo "Retrying build after flake update..."
-            docker build -t lurker:latest . || exit 1
+            docker buildx build --platform linux/amd64 -t lurker:latest --load . || exit 1
           else
             echo "No flake update detected. Skipping retry."
           fi
@@ -91,14 +97,12 @@ jobs:
           echo "Attempting to log in to GitHub Container Registry..."
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Publish Docker Image to Docker Hub
+      - name: Build and Publish Multi-Platform Docker Images
         run: |
-          echo "Publishing Docker image to Docker Hub..."
-          docker tag lurker:latest ${{ secrets.DOCKER_USERNAME }}/lurker:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/lurker:latest
-
-      - name: Publish Docker Image to GitHub Container Registry
-        run: |
-          echo "Publishing Docker image to GitHub Container Registry..."
-          docker tag lurker:latest ghcr.io/${{ github.repository_owner }}/lurker:latest
-          docker push ghcr.io/${{ github.repository_owner }}/lurker:latest
+          echo "Building and publishing multi-platform Docker images..."
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -t ${{ secrets.DOCKER_USERNAME }}/lurker:latest \
+            -t ghcr.io/${{ github.repository_owner }}/lurker:latest \
+            --push \
+            .
