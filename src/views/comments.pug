@@ -61,8 +61,10 @@ html
             a(href=`/media/${postMedia.url}`)
               img(src=postMedia.url).post-media
           else if isPostVideo(post)
-            - var url = postMedia.secure_media.reddit_video.dash_url
-            video(controls data-dashjs-player src=`${url}`).post-media
+            - var decodedVideos = decodePostVideoUrls(postMedia)
+            - var videoSrc = decodedVideos[2] || decodedVideos[1]
+            - var needsDash = !decodedVideos[2] && !!decodedVideos[1]
+            video(controls data-dashjs-player=needsDash ? "" : null src=videoSrc).post-media
           else if isPostLink(post)
             a(href=post.url)
               | #{post.url}

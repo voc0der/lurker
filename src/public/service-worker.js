@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'lurker-v1';
+const CACHE_VERSION = 'lurker-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const OFFLINE_PAGE = '/offline';
@@ -65,8 +65,11 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Different strategies for different resource types
-  if (isStaticAsset(url)) {
-    // Static assets: Cache first, fallback to network
+  if (isStylesheetOrScript(url)) {
+    // Styles and scripts: Network first so updates ship promptly.
+    event.respondWith(networkFirstCacheFallback(request, STATIC_CACHE));
+  } else if (isStaticAsset(url)) {
+    // Images/fonts/icons: Cache first.
     event.respondWith(cacheFirst(request));
   } else if (isAPIRequest(url)) {
     // API requests: Network only (always fresh data)
@@ -79,8 +82,12 @@ self.addEventListener('fetch', (event) => {
 
 // Helper: Check if request is for a static asset
 function isStaticAsset(url) {
-  const staticExtensions = ['.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.gif', '.woff', '.woff2'];
+  const staticExtensions = ['.png', '.jpg', '.jpeg', '.svg', '.gif', '.woff', '.woff2'];
   return staticExtensions.some(ext => url.pathname.endsWith(ext)) || url.pathname.startsWith('/icon-');
+}
+
+function isStylesheetOrScript(url) {
+  return url.pathname.endsWith('.css') || url.pathname.endsWith('.js');
 }
 
 // Helper: Check if request is an API call
@@ -107,6 +114,23 @@ async function cacheFirst(request) {
     return response;
   } catch (error) {
     console.error('[Service Worker] Cache first failed:', error);
+    throw error;
+  }
+}
+
+async function networkFirstCacheFallback(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    const cached = await cache.match(request);
+    if (cached) {
+      return cached;
+    }
     throw error;
   }
 }
