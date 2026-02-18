@@ -377,7 +377,9 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 	logger.debug("Dashboard - rendering with user:", {
 		infiniteScroll: req.user.infiniteScroll,
 		useClassicLayout: req.user.useClassicLayout,
-		themePreference: req.user.themePreference
+		themePreference: req.user.themePreference,
+		highResThumbnails: req.user.highResThumbnails,
+		showNsfwThumbnails: req.user.showNsfwThumbnails,
 	});
 
 	res.render("dashboard", {
@@ -392,10 +394,11 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
 // POST /update-preferences
 router.post("/update-preferences", authenticateToken, async (req, res) => {
-	const { infiniteScroll, useClassicLayout, themePreference, highResThumbnails } = req.body;
+	const { infiniteScroll, useClassicLayout, themePreference, highResThumbnails, showNsfwThumbnails } = req.body;
 	const infiniteScrollValue = infiniteScroll === "1" ? 1 : 0;
 	const useClassicLayoutValue = useClassicLayout === "1" ? 1 : 0;
 	const highResThumbnailsValue = highResThumbnails === "1" ? 1 : 0;
+	const showNsfwThumbnailsValue = showNsfwThumbnails === "1" ? 1 : 0;
 	const themeValue = themePreference || 'auto';
 
 	logger.debug("Received preferences:", {
@@ -403,28 +406,31 @@ router.post("/update-preferences", authenticateToken, async (req, res) => {
 		useClassicLayout,
 		themePreference,
 		highResThumbnails,
+		showNsfwThumbnails,
 		computed: {
 			infiniteScrollValue,
 			useClassicLayoutValue,
 			themeValue,
 			highResThumbnailsValue,
+			showNsfwThumbnailsValue,
 		},
 		userId: req.user.id
 	});
 
 	try {
-		const result = db.query("UPDATE users SET infiniteScroll = $infiniteScroll, useClassicLayout = $useClassicLayout, themePreference = $themePreference, highResThumbnails = $highResThumbnails WHERE id = $id").run({
+		const result = db.query("UPDATE users SET infiniteScroll = $infiniteScroll, useClassicLayout = $useClassicLayout, themePreference = $themePreference, highResThumbnails = $highResThumbnails, showNsfwThumbnails = $showNsfwThumbnails WHERE id = $id").run({
 			infiniteScroll: infiniteScrollValue,
 			useClassicLayout: useClassicLayoutValue,
 			themePreference: themeValue,
 			highResThumbnails: highResThumbnailsValue,
+			showNsfwThumbnails: showNsfwThumbnailsValue,
 			id: req.user.id,
 		});
 
 		logger.debug("Update result:", result);
 
 		// Verify the update
-		const updatedUser = db.query("SELECT infiniteScroll, useClassicLayout, themePreference, highResThumbnails FROM users WHERE id = $id").get({ id: req.user.id });
+		const updatedUser = db.query("SELECT infiniteScroll, useClassicLayout, themePreference, highResThumbnails, showNsfwThumbnails FROM users WHERE id = $id").get({ id: req.user.id });
 		logger.debug("User after update:", updatedUser);
 
 		return res.redirect("/dashboard");

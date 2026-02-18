@@ -4,6 +4,7 @@ mixin post(p, currentUrl)
   - var from = encodeURIComponent(currentUrl)
   - var viewQuery = query && query.view ? query.view : 'compact'
   - var sortQuery = query && query.sort ? query.sort + (query.t ? '&t=' + query.t : '') : 'hot'
+  - var showNsfwThumbnails = user && user.showNsfwThumbnails === 1
   article(class=`post`)
     div.post-container(class=`${query.view} ${p.stickied?"sticky":""}`)
       div.post-info
@@ -40,11 +41,11 @@ mixin post(p, currentUrl)
           div.media-preview
             - var onclick = `toggleDetails('${p.id}')`
             if isPostGallery(p)
-              - var item = (p.over_18 ? `/nsfw.svg` : p.spoiler ? `/spoiler.svg` : postGalleryItems(p)[0].url)
+              - var item = (p.over_18 && !showNsfwThumbnails ? `/nsfw.svg` : p.spoiler ? `/spoiler.svg` : postGalleryItems(p)[0].url)
               img(src=item onclick=onclick) 
             else if isPostImage(p)
               - var useHighRes = !user || user.highResThumbnails === undefined || user.highResThumbnails === 1
-              - var url = postThumbnail(p, useHighRes)
+              - var url = postThumbnail(p, useHighRes, showNsfwThumbnails)
               img(src=url onclick=onclick)
             else if isPostVideo(p)
               - var useHighRes = !user || user.highResThumbnails === undefined || user.highResThumbnails === 1
@@ -58,7 +59,7 @@ mixin post(p, currentUrl)
       details(id=`${p.id}` open=(query.view == "card" && (isPostMedia(p) || isPostLink(p))) class=`${query.view}`)
         summary.expand-post expand media
         div.image-viewer
-          if query.view == "card" && (p.spoiler || p.over_18) && isPostMedia(p)
+          if query.view == "card" && (p.spoiler || (p.over_18 && !showNsfwThumbnails)) && isPostMedia(p)
             div.spoiler(id=`spoiler_${p.id}`, onclick=`javascript:document.getElementById('spoiler_${p.id}').style.display = 'none';`) 
               h2
                 != p.over_18 ? 'nsfw' : 'spoiler'

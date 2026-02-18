@@ -33,6 +33,11 @@ html
               | &nbsp;Use High Resolution Thumbnails (disable for low bandwidth)
 
           div(style="margin-top: 15px;")
+            label(for="pref-show-nsfw-thumbnails")
+              input(type="checkbox" id="pref-show-nsfw-thumbnails" name="showNsfwThumbnails" value="1" checked=(user.showNsfwThumbnails === 1))
+              | &nbsp;Don't hide thumbnails for 18+ content
+
+          div(style="margin-top: 15px;")
             label(for="pref-theme" style="display: block; margin-bottom: 5px;") Theme Preference:
             select(id="pref-theme" name="themePreference" style="padding: 5px; background-color: var(--bg-color-muted); color: var(--text-color); border: 1px solid var(--text-color-muted); border-radius: 4px;")
               option(value="auto" selected=(user.themePreference === 'auto')) Auto (system preference)

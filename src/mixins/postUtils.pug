@@ -23,9 +23,10 @@
       || imgRe.test(p.url);
   }
 -
-  function postThumbnail(p, useHighRes) {
+  function postThumbnail(p, useHighRes, showNsfwThumbnails) {
     p = getPostData(p);
-    if (p.over_18) {
+    const hideNsfwThumbnails = showNsfwThumbnails !== true;
+    if (p.over_18 && hideNsfwThumbnails) {
       return "/nsfw.svg";
     } else if (p.thumbnail == "spoiler") {
       return "/spoiler.svg";

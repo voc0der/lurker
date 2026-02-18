@@ -97,6 +97,13 @@ runMigration("add-high-res-thumbnails-column", () => {
   `).run();
 });
 
+runMigration("add-show-nsfw-thumbnails-column", () => {
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN showNsfwThumbnails INTEGER DEFAULT 0
+  `).run();
+});
+
 runMigration("add-oidc-support", () => {
 	// Core OIDC fields
 	db.query(`
