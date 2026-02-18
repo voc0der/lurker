@@ -219,6 +219,7 @@ router.get("/api/r/:subreddit/posts", authenticateToken, async (req, res) => {
 			posts: posts ? posts.posts : [],
 			query,
 			currentUrl: req.query.currentUrl || req.originalUrl,
+			user: req.user,
 			...commonRenderOptions,
 		}, (err, html) => {
 			if (err) reject(err);
