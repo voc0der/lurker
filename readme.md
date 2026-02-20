@@ -222,3 +222,7 @@ nix build .#lurker  # build the thing
 - [x] support 'more comments'
 
 This is a fork of https://github.com/oppiliappan/lurker/ and I respect their work!
+
+### star history
+
+[![Star History Chart](https://api.star-history.com/svg?repos=voc0der/lurker&type=Date)](https://star-history.com/#voc0der/lurker&Date)
