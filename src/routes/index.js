@@ -94,6 +94,29 @@ function canUseRemoteHeaderLogin(req) {
 	);
 }
 
+function sanitizeSubredditPath(value) {
+	const raw = firstValue(value);
+	if (typeof raw !== "string") return "";
+	const cleaned = raw
+		.split("+")
+		.map((part) => part.trim().replace(/^r\//i, ""))
+		.filter((part) => /^[A-Za-z0-9_]{1,21}$/.test(part));
+	return cleaned.join("+");
+}
+
+function sanitizeSingleSubreddit(value) {
+	const subreddit = sanitizeSubredditPath(value);
+	if (!subreddit || subreddit.includes("+")) return "";
+	return subreddit;
+}
+
+function sanitizeThingId(value) {
+	const raw = firstValue(value);
+	if (typeof raw !== "string") return "";
+	const trimmed = raw.trim();
+	return /^[A-Za-z0-9_]+$/.test(trimmed) ? trimmed : "";
+}
+
 function generateRandomPassword(length = 12) {
   const bytes = crypto.randomBytes(length);
   return bytes.toString('base64').slice(0, length);  // Convert to base64 and slice to desired length
@@ -235,7 +258,10 @@ router.get("/", authenticateToken, async (req, res) => {
 
 // GET /r/:id
 router.get("/r/:subreddit", authenticateToken, async (req, res) => {
-	const subreddit = req.params.subreddit;
+	const subreddit = sanitizeSubredditPath(req.params.subreddit);
+	if (!subreddit) {
+		return res.status(400).send("Invalid subreddit");
+	}
 	const isMulti = subreddit.includes("+");
 	const query = req.query ? req.query : {};
 	if (!query.sort) {
@@ -288,7 +314,15 @@ router.get("/api/r/:subreddit/posts", authenticateToken, async (req, res) => {
 		const subs = db
 			.query("SELECT * FROM subscriptions WHERE user_id = $id")
 			.all({ id: req.user.id });
-		subreddit = subs.map((s) => s.subreddit).join("+");
+		const sanitizedSubs = subs
+			.map((s) => sanitizeSingleSubreddit(s.subreddit))
+			.filter(Boolean);
+		subreddit = sanitizedSubs.join("+") || "all";
+	} else {
+		subreddit = sanitizeSubredditPath(subreddit);
+		if (!subreddit) {
+			return res.status(400).json({ error: "Invalid subreddit" });
+		}
 	}
 
 	const posts = await G.getSubmissions(query.sort, subreddit, query);
@@ -320,7 +354,10 @@ router.get("/api/r/:subreddit/posts", authenticateToken, async (req, res) => {
 
 // GET /comments/:id
 router.get("/comments/:id", authenticateToken, async (req, res) => {
-	const id = req.params.id;
+	const id = sanitizeThingId(req.params.id);
+	if (!id) {
+		return res.status(400).send("Invalid submission id");
+	}
 
 	const params = {
 		limit: 50,
@@ -340,8 +377,11 @@ router.get(
 	"/comments/:parent_id/comment/:child_id",
 	authenticateToken,
 	async (req, res) => {
-		const parent_id = req.params.parent_id;
-		const child_id = req.params.child_id;
+		const parent_id = sanitizeThingId(req.params.parent_id);
+		const child_id = sanitizeThingId(req.params.child_id);
+		if (!parent_id || !child_id) {
+			return res.status(400).send("Invalid comment thread identifiers");
+		}
 
 		const params = {
 			limit: 50,
@@ -878,8 +918,11 @@ router.get("/logout", (req, res) => {
 
 // POST /subscribe
 router.post("/subscribe", authenticateToken, async (req, res) => {
-	const { subreddit } = req.body;
+	const subreddit = sanitizeSingleSubreddit(req.body?.subreddit);
 	const user = req.user;
+	if (!subreddit) {
+		return res.status(400).send("Invalid subreddit");
+	}
 	const existingSubscription = db
 		.query(
 			"SELECT * FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit",
@@ -896,8 +939,11 @@ router.post("/subscribe", authenticateToken, async (req, res) => {
 });
 
 router.post("/unsubscribe", authenticateToken, async (req, res) => {
-	const { subreddit } = req.body;
+	const subreddit = sanitizeSingleSubreddit(req.body?.subreddit);
 	const user = req.user;
+	if (!subreddit) {
+		return res.status(400).send("Invalid subreddit");
+	}
 	const existingSubscription = db
 		.query(
 			"SELECT * FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit",
@@ -949,27 +995,33 @@ router.post("/subscribe-bulk", authenticateToken, async (req, res) => {
 	};
 
 	for (const subreddit of subreddits) {
+		const safeSubreddit = sanitizeSingleSubreddit(subreddit);
+		if (!safeSubreddit) {
+			results.failed.push(subreddit);
+			continue;
+		}
+
 		try {
 			const existingSubscription = db
 				.query(
 					"SELECT * FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit",
 				)
-				.get({ id: user.id, subreddit });
+				.get({ id: user.id, subreddit: safeSubreddit });
 
 			if (existingSubscription) {
-				results.skipped.push(subreddit);
+				results.skipped.push(safeSubreddit);
 			} else {
 				db.query(
 					"INSERT INTO subscriptions (user_id, subreddit) VALUES ($id, $subreddit)",
-				).run({ id: user.id, subreddit });
-				results.added.push(subreddit);
+				).run({ id: user.id, subreddit: safeSubreddit });
+				results.added.push(safeSubreddit);
 			}
 		} catch (error) {
 			logger.error("Error subscribing to subreddit", {
-				subreddit,
+				subreddit: safeSubreddit,
 				error: error?.message || String(error),
 			});
-			results.failed.push(subreddit);
+			results.failed.push(safeSubreddit);
 		}
 	}
 

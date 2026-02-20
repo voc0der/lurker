@@ -26,8 +26,13 @@ function safeTokenCompare(a, b) {
 	return crypto.timingSafeEqual(aBuf, bBuf);
 }
 
+function isSafeCookieName(name) {
+	if (!/^[A-Za-z0-9._-]+$/.test(name)) return false;
+	return !["__proto__", "prototype", "constructor"].includes(name);
+}
+
 function parseCookies(cookieHeader) {
-	const cookies = {};
+	const cookies = Object.create(null);
 	if (typeof cookieHeader !== "string" || cookieHeader.length === 0) {
 		return cookies;
 	}
@@ -36,6 +41,7 @@ function parseCookies(cookieHeader) {
 		const [rawName, ...rawValueParts] = rawCookie.split("=");
 		const name = rawName ? rawName.trim() : "";
 		if (!name) continue;
+		if (!isSafeCookieName(name)) continue;
 		const rawValue = rawValueParts.join("=").trim();
 		try {
 			cookies[name] = decodeURIComponent(rawValue);

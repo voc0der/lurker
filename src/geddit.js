@@ -36,6 +36,14 @@ class Geddit {
 		return cleaned.join("+");
 	}
 
+	encodeSubredditPath(subredditPath) {
+		if (!subredditPath) return "";
+		return subredditPath
+			.split("+")
+			.map((segment) => encodeURIComponent(segment))
+			.join("+");
+	}
+
 	sanitizeThingId(id) {
 		if (!id || typeof id !== "string") return "";
 		const trimmed = id.trim();
@@ -56,7 +64,8 @@ class Geddit {
 
 		const safeSort = this.sanitizeSort(sort);
 		const safeSubreddit = this.sanitizeSubredditPath(subreddit);
-		const subredditStr = safeSubreddit ? `/r/${safeSubreddit}` : "";
+		const encodedSubreddit = this.encodeSubredditPath(safeSubreddit);
+		const subredditStr = encodedSubreddit ? `/r/${encodedSubreddit}` : "";
 		const url = this.buildRedditUrl(
 			`${subredditStr}/${encodeURIComponent(safeSort)}.json`,
 			Object.assign({}, params, options),
@@ -162,8 +171,9 @@ class Geddit {
 	async getSubreddit(subreddit) {
 		const safeSubreddit = this.sanitizeSubredditPath(subreddit);
 		if (!safeSubreddit) return null;
+		const encodedSubreddit = this.encodeSubredditPath(safeSubreddit);
 
-		return await fetch(`${this.host}/r/${safeSubreddit}/about.json`, {
+		return await fetch(`${this.host}/r/${encodedSubreddit}/about.json`, {
 			headers: this.headers,
 		})
 			.then((res) => res.json())

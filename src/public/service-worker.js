@@ -185,6 +185,7 @@ async function networkFirstWithOffline(request) {
 // Listen for messages from clients
 self.addEventListener('message', (event) => {
   if (!event.data || event.data.type !== 'SKIP_WAITING') return;
+  if (event.origin && event.origin !== self.location.origin) return;
 
   event.waitUntil(
     (async () => {
