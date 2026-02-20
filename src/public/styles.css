@@ -372,7 +372,6 @@ video:fullscreen {
   object-fit: contain;
   background: #000;
 }
-
 .image-viewer.main-content img,
 .image-viewer.main-content video {
   max-height: 70vh;
