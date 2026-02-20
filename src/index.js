@@ -31,8 +31,40 @@ function isSafeCookieName(name) {
 	return !["__proto__", "prototype", "constructor"].includes(name);
 }
 
+function setKnownCookie(cookies, name, value) {
+	switch (name) {
+		case "auth_token":
+			cookies.auth_token = value;
+			break;
+		case "oidc_state":
+			cookies.oidc_state = value;
+			break;
+		case "oidc_nonce":
+			cookies.oidc_nonce = value;
+			break;
+		case "oidc_verifier":
+			cookies.oidc_verifier = value;
+			break;
+		case "oidc_redirect":
+			cookies.oidc_redirect = value;
+			break;
+		case CSRF_COOKIE_NAME:
+			cookies[CSRF_COOKIE_NAME] = value;
+			break;
+		default:
+			break;
+	}
+}
+
 function parseCookies(cookieHeader) {
-	const cookies = Object.create(null);
+	const cookies = {
+		auth_token: undefined,
+		oidc_state: undefined,
+		oidc_nonce: undefined,
+		oidc_verifier: undefined,
+		oidc_redirect: undefined,
+		[CSRF_COOKIE_NAME]: undefined,
+	};
 	if (typeof cookieHeader !== "string" || cookieHeader.length === 0) {
 		return cookies;
 	}
@@ -44,9 +76,9 @@ function parseCookies(cookieHeader) {
 		if (!isSafeCookieName(name)) continue;
 		const rawValue = rawValueParts.join("=").trim();
 		try {
-			cookies[name] = decodeURIComponent(rawValue);
+			setKnownCookie(cookies, name, decodeURIComponent(rawValue));
 		} catch {
-			cookies[name] = rawValue;
+			setKnownCookie(cookies, name, rawValue);
 		}
 	}
 
