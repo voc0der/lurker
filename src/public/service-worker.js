@@ -184,7 +184,20 @@ async function networkFirstWithOffline(request) {
 
 // Listen for messages from clients
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (!event.data || event.data.type !== 'SKIP_WAITING') return;
+
+  event.waitUntil(
+    (async () => {
+      const source = event.source;
+      if (!source || !source.id) return;
+
+      const client = await self.clients.get(source.id);
+      if (!client) return;
+
+      const origin = new URL(client.url).origin;
+      if (origin !== self.location.origin) return;
+
+      self.skipWaiting();
+    })(),
+  );
 });

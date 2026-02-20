@@ -11,28 +11,68 @@ function shouldLog(level) {
   return LEVELS[level] >= LEVELS[LOG_LEVEL];
 }
 
-function debug(...args) {
-  if (shouldLog('debug')) {
-    console.log('[DEBUG]', ...args);
+function sanitizeControlChars(value) {
+  return String(value).replace(/[\r\n\t]/g, (ch) => {
+    if (ch === '\r') return '\\r';
+    if (ch === '\n') return '\\n';
+    return '\\t';
+  });
+}
+
+function serializeArg(arg) {
+  if (arg instanceof Error) {
+    return sanitizeControlChars(
+      JSON.stringify({
+        name: arg.name,
+        message: arg.message,
+        stack: arg.stack,
+      }),
+    );
   }
+
+  if (typeof arg === 'string') {
+    return sanitizeControlChars(arg);
+  }
+
+  if (arg === undefined) {
+    return 'undefined';
+  }
+
+  if (arg === null) {
+    return 'null';
+  }
+
+  if (typeof arg === 'number' || typeof arg === 'boolean' || typeof arg === 'bigint') {
+    return String(arg);
+  }
+
+  try {
+    return sanitizeControlChars(JSON.stringify(arg));
+  } catch {
+    return '[unserializable]';
+  }
+}
+
+function writeLog(level, consoleMethod, args) {
+  if (!shouldLog(level)) return;
+  const message = args.map((arg) => serializeArg(arg)).join(' ');
+  console[consoleMethod](`[${level.toUpperCase()}] ${message}`);
+}
+
+function debug(...args) {
+  writeLog('debug', 'log', args);
 }
 
 function info(...args) {
-  if (shouldLog('info')) {
-    console.log('[INFO]', ...args);
-  }
+  writeLog('info', 'log', args);
 }
 
 function warn(...args) {
-  if (shouldLog('warn')) {
-    console.warn('[WARN]', ...args);
-  }
+  writeLog('warn', 'warn', args);
 }
 
 function error(...args) {
-  if (shouldLog('error')) {
-    console.error('[ERROR]', ...args);
-  }
+  writeLog('error', 'error', args);
 }
 
 module.exports = { debug, info, warn, error };

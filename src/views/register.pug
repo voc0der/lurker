@@ -14,6 +14,7 @@ html
         div.register-message
           | lurker is a read-only reddit client
       form(action=`${action}` method="post")
+        input(type="hidden" name="_csrf" value=csrfToken)
         div.input-text
           label(for="username") username
           input(type="text" name="username" required)
@@ -32,4 +33,3 @@ html
           p 
             | already have an account?&nbsp;
             a(href="/login") login
-

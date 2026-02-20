@@ -15,12 +15,18 @@ script(defer).
     if (parts.length === 2) return parts.pop().split(";").shift();
   }
 
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute("content") : "";
+  }
+
   async function doThing(sub, thing) {
     const jwtToken = getCookie("auth_token");
     const response = await fetch(`/${thing}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${jwtToken}`,
+        'X-CSRF-Token': getCsrfToken(),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ subreddit: sub }),
@@ -141,6 +147,7 @@ script(defer).
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
+          'X-CSRF-Token': getCsrfToken(),
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ subreddits }),
@@ -214,6 +221,7 @@ script(defer).
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
+          'X-CSRF-Token': getCsrfToken(),
           'Content-Type': 'application/json',
         },
       });
@@ -230,5 +238,4 @@ script(defer).
       alert('Network error occurred');
     }
   }
-
 

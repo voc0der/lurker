@@ -28,6 +28,7 @@ html
 
       - var url = redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'
       form(action=url method="post")
+        input(type="hidden" name="_csrf" value=csrfToken)
         div.input-text
           label(for="username") username
           input(type="text" name="username" required)

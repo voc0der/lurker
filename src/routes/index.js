@@ -12,6 +12,87 @@ const oidc = require("../oidc");
 
 const router = express.Router();
 const G = new geddit.Geddit();
+const SAFE_REDIRECT_FALLBACK = "/";
+
+function firstValue(value) {
+	if (Array.isArray(value)) return value[0];
+	return value;
+}
+
+function normalizeIp(ip) {
+	if (!ip || typeof ip !== "string") return "";
+	if (ip.startsWith("::ffff:")) return ip.slice(7);
+	return ip;
+}
+
+function isLoopbackIp(ip) {
+	return ip === "127.0.0.1" || ip === "::1";
+}
+
+function getTrustedProxyIps() {
+	return (process.env.REVERSE_PROXY_WHITELIST || "")
+		.split(",")
+		.map((ip) => normalizeIp(ip.trim()))
+		.filter(Boolean);
+}
+
+function isRemoteHeaderLoginEnabled() {
+	const value = String(process.env.REMOTE_HEADER_LOGIN || "").toLowerCase();
+	return value === "true" || value === "1";
+}
+
+function getRemoteHeaderUser(req) {
+	const raw = firstValue(req.headers["remote-user"] || req.headers["http_auth_user"]);
+	return typeof raw === "string" ? raw.trim() : "";
+}
+
+function getRemoteHeaderGroups(req) {
+	const raw = firstValue(req.headers["remote-groups"] || req.headers["http_remote_groups"]);
+	if (typeof raw !== "string" || !raw.trim()) return [];
+	return raw
+		.split(",")
+		.map((group) => group.trim())
+		.filter(Boolean);
+}
+
+function isTrustedRemoteHeaderSource(req) {
+	const remoteAddress = normalizeIp(req.socket?.remoteAddress || "");
+	if (!remoteAddress) return false;
+	if (isLoopbackIp(remoteAddress)) return true;
+	const trustedProxyIps = getTrustedProxyIps();
+	return trustedProxyIps.includes(remoteAddress);
+}
+
+function getSafeRedirectTarget(value, fallback = SAFE_REDIRECT_FALLBACK) {
+	const raw = firstValue(value);
+	if (typeof raw !== "string") return fallback;
+	const trimmed = raw.trim();
+	if (!trimmed || !trimmed.startsWith("/") || trimmed.startsWith("//")) return fallback;
+	if (trimmed.includes("\\") || trimmed.includes("\0")) return fallback;
+
+	try {
+		const parsed = new URL(trimmed, "http://localhost");
+		if (parsed.origin !== "http://localhost") return fallback;
+		return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+	} catch {
+		return fallback;
+	}
+}
+
+function getRequestedRedirect(req, fallback = SAFE_REDIRECT_FALLBACK) {
+	return getSafeRedirectTarget(
+		firstValue(req.query?.redirect) || firstValue(req.query?.direct),
+		fallback,
+	);
+}
+
+function canUseRemoteHeaderLogin(req) {
+	return (
+		isRemoteHeaderLoginEnabled() &&
+		Boolean(getRemoteHeaderUser(req)) &&
+		isTrustedRemoteHeaderSource(req)
+	);
+}
 
 function generateRandomPassword(length = 12) {
   const bytes = crypto.randomBytes(length);
@@ -31,13 +112,16 @@ function setAuthTokenCookie(res, username, userId) {
 
 // Middleware to check if user is logged in via HTTP headers
 async function loginViaHeaders(req, res, next) {
-  const remoteUser = req.headers['remote-user'] || req.headers['HTTP_AUTH_USER'];
-  const remoteGroups = req.headers['remote-groups'] ? req.headers['remote-groups'].split(',').map(s => s.trim()).filter(Boolean) : [];
+  const remoteUser = getRemoteHeaderUser(req);
+  const remoteGroups = getRemoteHeaderGroups(req);
 
-  // We need env.REMOTE_HEADER_LOGIN=true to use SSO. Also check if remoteUser header is missing
-  if (!(process.env.REMOTE_HEADER_LOGIN || false) || !remoteUser) {
-    if(process.env.REMOTE_HEADER_LOGIN) logger.debug("Remote user header missing");
-    return res.redirect("/login");  // Redirect to login page if missing
+  if (!isRemoteHeaderLoginEnabled() || !remoteUser || !isTrustedRemoteHeaderSource(req)) {
+    if (isRemoteHeaderLoginEnabled() && remoteUser) {
+      logger.warn("Ignoring remote header login from untrusted source");
+    } else if (isRemoteHeaderLoginEnabled()) {
+      logger.debug("Remote user header missing");
+    }
+    return res.redirect("/login");
   }
 
   // If remoteUser is present, set user info and validate
@@ -68,7 +152,7 @@ async function loginViaHeaders(req, res, next) {
       const userId = insertedRecord.lastInsertRowid;
       setAuthTokenCookie(res, remoteUser, userId);
 
-      const redirectTo = req.query.redirect || req.query.direct || '/';
+      const redirectTo = getRequestedRedirect(req);
       return res.redirect(redirectTo);
     } catch (error) {
       logger.error("Error creating user from headers:", error);
@@ -93,7 +177,7 @@ async function loginViaHeaders(req, res, next) {
     }
 
     setAuthTokenCookie(res, remoteUser, existingUser.id);
-    const redirectTo = req.query.redirect || req.query.direct || '/';
+    const redirectTo = getRequestedRedirect(req);
     return res.redirect(redirectTo);
   }
 }
@@ -241,7 +325,7 @@ router.get("/comments/:id", authenticateToken, async (req, res) => {
 	const params = {
 		limit: 50,
 	};
-	response = await G.getSubmissionComments(id, params);
+	const response = await G.getSubmissionComments(id, params);
 	res.render("comments", {
 		data: unescape_submission(response),
 		user: req.user,
@@ -262,7 +346,7 @@ router.get(
 		const params = {
 			limit: 50,
 		};
-		response = await G.getSingleCommentThread(parent_id, child_id, params);
+		const response = await G.getSingleCommentThread(parent_id, child_id, params);
 		const comments = response.comments;
 		comments.forEach(unescape_comment);
 		res.render("single_comment_thread", {
@@ -555,7 +639,7 @@ router.get("/auth/oidc/login", async (req, res) => {
     return res.redirect("/login?bypass_oidc=true&message=OIDC not configured");
   }
 
-  const redirectAfterLogin = req.query.redirect || "/";
+  const redirectAfterLogin = getSafeRedirectTarget(req.query.redirect, "/");
   logger.debug(`[OIDC] Generating authorization URL, redirectAfterLogin: ${redirectAfterLogin}`);
 
   try {
@@ -596,7 +680,7 @@ router.get("/auth/oidc/callback", async (req, res) => {
   const state = req.cookies?.oidc_state;
   const nonce = req.cookies?.oidc_nonce;
   const code_verifier = req.cookies?.oidc_verifier;
-  const redirectAfterLogin = req.cookies?.oidc_redirect || "/";
+  const redirectAfterLogin = getSafeRedirectTarget(req.cookies?.oidc_redirect, "/");
 
   logger.debug('[OIDC] Callback received - cookies present:', {
     state: !!state,
@@ -734,7 +818,7 @@ router.get("/login", async (req, res, next) => {
     return res.redirect("/");
   }
 
-  const redirectTo = req.query.redirect || req.query.direct || "/";
+  const redirectTo = getRequestedRedirect(req);
   const bypassOidc = String(req.query.bypass_oidc || "").toLowerCase() === "true" || req.query.bypass_oidc === "1";
 
   // Priority 1: OIDC
@@ -744,8 +828,11 @@ router.get("/login", async (req, res, next) => {
   }
 
   // Priority 2: Remote Header SSO
-  if (req.headers['remote-user']) {
+  if (canUseRemoteHeaderLogin(req)) {
     return loginViaHeaders(req, res, next);
+  }
+  if (isRemoteHeaderLoginEnabled() && getRemoteHeaderUser(req)) {
+    logger.warn("Remote header login header ignored because request source is not trusted");
   }
 
   // Priority 3: Manual login
@@ -771,7 +858,7 @@ router.post("/login", async (req, res) => {
   if (user && (await Bun.password.verify(password, user.password_hash))) {
     try {
       setAuthTokenCookie(res, username, user.id);
-      const redirectTo = req.query.redirect || req.query.direct || '/';
+      const redirectTo = getRequestedRedirect(req);
       return res.redirect(redirectTo);
     } catch (error) {
       logger.error("Error signing JWT:", error);
@@ -839,7 +926,7 @@ router.post("/unsubscribe-all", authenticateToken, async (req, res) => {
 			count: result.changes,
 		});
 	} catch (error) {
-		console.error("Error removing all subscriptions:", error);
+		logger.error("Error removing all subscriptions", error);
 		res.status(500).send("Failed to remove subscriptions");
 	}
 });
@@ -878,7 +965,10 @@ router.post("/subscribe-bulk", authenticateToken, async (req, res) => {
 				results.added.push(subreddit);
 			}
 		} catch (error) {
-			console.error(`Error subscribing to ${subreddit}:`, error);
+			logger.error("Error subscribing to subreddit", {
+				subreddit,
+				error: error?.message || String(error),
+			});
 			results.failed.push(subreddit);
 		}
 	}

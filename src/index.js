@@ -1,7 +1,7 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const path = require("node:path");
-const cookieParser = require("cookie-parser");
+const crypto = require("node:crypto");
 const https = require("https");
 const fs = require("fs");
 const logger = require("./logger");
@@ -12,6 +12,40 @@ const hasher = new Bun.CryptoHasher("sha256", "secret-key");
 const JWT_KEY = process.env.JWT_SECRET_KEY || hasher.update(Math.random().toString()).digest("hex");
 const trustedProxyIPs = (process.env.REVERSE_PROXY_WHITELIST || "").split(",").map((ip) => ip.trim());
 const httpBinding = process.env.HTTP_BINDING || "0.0.0.0";
+const CSRF_COOKIE_NAME = "csrf_token";
+
+function generateCsrfToken() {
+	return crypto.randomBytes(32).toString("hex");
+}
+
+function safeTokenCompare(a, b) {
+	if (typeof a !== "string" || typeof b !== "string") return false;
+	const aBuf = Buffer.from(a);
+	const bBuf = Buffer.from(b);
+	if (aBuf.length !== bBuf.length) return false;
+	return crypto.timingSafeEqual(aBuf, bBuf);
+}
+
+function parseCookies(cookieHeader) {
+	const cookies = {};
+	if (typeof cookieHeader !== "string" || cookieHeader.length === 0) {
+		return cookies;
+	}
+
+	for (const rawCookie of cookieHeader.split(";")) {
+		const [rawName, ...rawValueParts] = rawCookie.split("=");
+		const name = rawName ? rawName.trim() : "";
+		if (!name) continue;
+		const rawValue = rawValueParts.join("=").trim();
+		try {
+			cookies[name] = decodeURIComponent(rawValue);
+		} catch {
+			cookies[name] = rawValue;
+		}
+	}
+
+	return cookies;
+}
 
 module.exports = { JWT_KEY };
 
@@ -51,7 +85,41 @@ async function bootstrap() {
 	app.use(express.urlencoded({ extended: true }));
 	app.use(express.static(path.join(__dirname, "public")));
 	app.use(express.static(path.join(__dirname, "assets")));
-	app.use(cookieParser());
+	app.use((req, _res, next) => {
+		req.cookies = parseCookies(req.headers.cookie);
+		next();
+	});
+
+	app.use((req, res, next) => {
+		let csrfToken = req.cookies?.[CSRF_COOKIE_NAME];
+		if (typeof csrfToken !== "string" || csrfToken.length < 32) {
+			csrfToken = generateCsrfToken();
+			res.cookie(CSRF_COOKIE_NAME, csrfToken, {
+				httpOnly: true,
+				secure: req.secure,
+				sameSite: "Strict",
+				path: "/",
+			});
+		}
+		res.locals.csrfToken = csrfToken;
+		next();
+	});
+
+	app.use((req, res, next) => {
+		if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+		const cookieToken = req.cookies?.[CSRF_COOKIE_NAME];
+		const requestToken = req.get("x-csrf-token") || req.body?._csrf;
+
+		if (!safeTokenCompare(cookieToken, requestToken)) {
+			logger.warn("Rejected request due to invalid CSRF token", {
+				method: req.method,
+				path: req.path,
+			});
+			return res.status(403).send("Invalid CSRF token");
+		}
+
+		return next();
+	});
 
 	app.use(
 		rateLimit({

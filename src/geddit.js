@@ -15,16 +15,55 @@ class Geddit {
 		};
 	}
 
+	sanitizeSort(sort) {
+		const allowedSorts = new Set([
+			"best",
+			"hot",
+			"new",
+			"top",
+			"rising",
+			"controversial",
+		]);
+		return allowedSorts.has(sort) ? sort : "hot";
+	}
+
+	sanitizeSubredditPath(subreddit) {
+		if (!subreddit || typeof subreddit !== "string") return "";
+		const cleaned = subreddit
+			.split("+")
+			.map((part) => part.trim().replace(/^r\//i, ""))
+			.filter((part) => /^[A-Za-z0-9_]{1,21}$/.test(part));
+		return cleaned.join("+");
+	}
+
+	sanitizeThingId(id) {
+		if (!id || typeof id !== "string") return "";
+		const trimmed = id.trim();
+		return /^[A-Za-z0-9_]+$/.test(trimmed) ? trimmed : "";
+	}
+
+	buildRedditUrl(pathname, options = {}) {
+		const url = new URL(pathname, this.host);
+		url.search = new URLSearchParams(options).toString();
+		return url;
+	}
+
 	async getSubmissions(sort = "hot", subreddit = null, options = {}) {
 		const params = {
 			limit: 20,
 			include_over_18: true,
 		};
 
-		const subredditStr = subreddit ? `/r/${subreddit}` : "";
+		const safeSort = this.sanitizeSort(sort);
+		const safeSubreddit = this.sanitizeSubredditPath(subreddit);
+		const subredditStr = safeSubreddit ? `/r/${safeSubreddit}` : "";
+		const url = this.buildRedditUrl(
+			`${subredditStr}/${encodeURIComponent(safeSort)}.json`,
+			Object.assign({}, params, options),
+		);
 
 		return await fetch(
-			`${this.host + subredditStr}/${sort}.json?${new URLSearchParams(Object.assign(params, options))}`,
+			url,
 			{ headers: this.headers },
 		)
 			.then((res) => res.json())
@@ -121,7 +160,10 @@ class Geddit {
 	}
 
 	async getSubreddit(subreddit) {
-		return await fetch(`${this.host}/r/${subreddit}/about.json`, {
+		const safeSubreddit = this.sanitizeSubredditPath(subreddit);
+		if (!safeSubreddit) return null;
+
+		return await fetch(`${this.host}/r/${safeSubreddit}/about.json`, {
 			headers: this.headers,
 		})
 			.then((res) => res.json())
@@ -359,8 +401,11 @@ class Geddit {
 	}
 
 	async getSubmissionComments(id, options = this.parameters) {
+		const safeId = this.sanitizeThingId(id);
+		if (!safeId) return null;
+
 		return await fetch(
-			`${this.host}/comments/${id}.json?${new URLSearchParams(options)}`,
+			this.buildRedditUrl(`/comments/${encodeURIComponent(safeId)}.json`, options),
 			{ headers: this.headers },
 		)
 			.then((res) => res.json())
@@ -372,8 +417,15 @@ class Geddit {
 	}
 
 	async getSingleCommentThread(parent_id, child_id, options = this.parameters) {
+		const safeParentId = this.sanitizeThingId(parent_id);
+		const safeChildId = this.sanitizeThingId(child_id);
+		if (!safeParentId || !safeChildId) return null;
+
 		return await fetch(
-			`${this.host}/comments/${parent_id}/comment/${child_id}.json?${new URLSearchParams(options)}`,
+			this.buildRedditUrl(
+				`/comments/${encodeURIComponent(safeParentId)}/comment/${encodeURIComponent(safeChildId)}.json`,
+				options,
+			),
 			{ headers: this.headers },
 		)
 			.then((res) => res.json())

@@ -4,8 +4,38 @@ const { JWT_KEY } = require("./");
 const logger = require("./logger");
 const oidc = require("./oidc");
 
+function normalizeIp(ip) {
+	if (!ip || typeof ip !== "string") return "";
+	if (ip.startsWith("::ffff:")) return ip.slice(7);
+	return ip;
+}
+
+function isLoopbackIp(ip) {
+	return ip === "127.0.0.1" || ip === "::1";
+}
+
+function getTrustedProxyIps() {
+	return (process.env.REVERSE_PROXY_WHITELIST || "")
+		.split(",")
+		.map((ip) => normalizeIp(ip.trim()))
+		.filter(Boolean);
+}
+
+function isRemoteHeaderLoginEnabled() {
+	const value = String(process.env.REMOTE_HEADER_LOGIN || "").toLowerCase();
+	return value === "true" || value === "1";
+}
+
+function isTrustedRemoteHeaderSource(req) {
+	const remoteAddress = normalizeIp(req.socket?.remoteAddress || "");
+	if (!remoteAddress) return false;
+	if (isLoopbackIp(remoteAddress)) return true;
+	return getTrustedProxyIps().includes(remoteAddress);
+}
+
 function parseRemoteGroups(req) {
-	const raw = req.headers["remote-groups"] || req.headers["HTTP_REMOTE_GROUPS"];
+	if (!isRemoteHeaderLoginEnabled() || !isTrustedRemoteHeaderSource(req)) return [];
+	const raw = req.headers["remote-groups"] || req.headers["http_remote_groups"];
 	if (!raw) return [];
 	return String(raw)
 		.split(",")
@@ -77,7 +107,7 @@ async function authenticateToken(req, res, next) {
 	}
 
 	// If Remote Header SSO is enabled, keep isAdmin in sync with the header.
-	if ((process.env.REMOTE_HEADER_LOGIN || false) && remoteGroups.length > 0) {
+	if (isRemoteHeaderLoginEnabled() && remoteGroups.length > 0) {
 		const groupsStr = groupsJson(remoteGroups);
 		if (dbUser.isAdmin !== isAdminFromHeaders || (dbUser.groups || "[]") !== groupsStr) {
 			db.query("UPDATE users SET isAdmin = $isAdmin, groups = $groups WHERE id = $id").run({
@@ -152,7 +182,7 @@ async function authenticateAdmin(req, res, next) {
 		return res.redirect("/login?message=Admin user not found.");
 	}
 
-	if ((process.env.REMOTE_HEADER_LOGIN || false) && remoteGroups.length > 0) {
+	if (isRemoteHeaderLoginEnabled() && remoteGroups.length > 0) {
 		const groupsStr = groupsJson(remoteGroups);
 		if (dbUser.isAdmin !== isAdminFromHeaders || (dbUser.groups || "[]") !== groupsStr) {
 			db.query("UPDATE users SET isAdmin = $isAdmin, groups = $groups WHERE id = $id").run({

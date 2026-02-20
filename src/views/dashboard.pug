@@ -17,6 +17,7 @@ html
 
         h2 preferences
         form(action="/update-preferences" method="POST" autocomplete="off")
+          input(type="hidden" name="_csrf" value=csrfToken)
           div
             label(for="pref-infinite-scroll")
               input(type="checkbox" id="pref-infinite-scroll" name="infiniteScroll" value="1" checked=(user.infiniteScroll === 1))
