@@ -329,6 +329,15 @@ router.post("/register", validateInviteToken, async (req, res) => {
 });
 
 router.get("/login", async (req, res) => {
+	const token = req.cookies.auth_token;
+	if (token) {
+		try {
+			jwt.verify(token, JWT_KEY);
+			return res.redirect("/");
+		} catch {
+			res.clearCookie("auth_token", { httpOnly: true, secure: true, path: "/" });
+		}
+	}
 	res.render("login", req.query);
 });
 

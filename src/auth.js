@@ -21,6 +21,7 @@ function authenticateToken(req, res, next) {
 		req.user = user;
 		next();
 	} catch (error) {
+		res.clearCookie("auth_token", { httpOnly: true, secure: true, path: "/" });
 		res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
 	}
 }
