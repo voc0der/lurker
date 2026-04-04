@@ -1,8 +1,24 @@
 const { Database } = require("bun:sqlite");
-const path = require("path");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 
-// Use /data directory for database (where volume is mounted)
-const dbPath = path.join("/data", "lurker.db");
+function getDefaultDataDir() {
+	if (fs.existsSync("/data")) {
+		return "/data";
+	}
+
+	const xdgDataHome = process.env.XDG_DATA_HOME;
+	if (xdgDataHome) {
+		return path.join(xdgDataHome, "lurker");
+	}
+
+	return path.join(os.homedir(), ".local", "share", "lurker");
+}
+
+const dataDir = process.env.LURKER_DATA_DIR || getDefaultDataDir();
+fs.mkdirSync(dataDir, { recursive: true });
+const dbPath = path.join(dataDir, "lurker.db");
 const db = new Database(dbPath, {
 	strict: true,
 });

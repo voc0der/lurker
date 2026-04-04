@@ -42,8 +42,9 @@ function isTrustedRemoteHeaderSource(req) {
 }
 
 function parseRemoteGroups(req) {
-	if (!isRemoteHeaderLoginEnabled() || !isTrustedRemoteHeaderSource(req)) return [];
-	const raw = req.headers["remote-groups"] || req.headers["http_remote_groups"];
+	if (!isRemoteHeaderLoginEnabled() || !isTrustedRemoteHeaderSource(req))
+		return [];
+	const raw = req.headers["remote-groups"] || req.headers.http_remote_groups;
 	if (!raw) return [];
 	return String(raw)
 		.split(",")
@@ -65,7 +66,9 @@ function logTokenError(message, error) {
 }
 
 function setAuthTokenCookie(res, username, userId) {
-	const token = jwt.sign({ username, id: userId }, JWT_KEY, { expiresIn: "5d" });
+	const token = jwt.sign({ username, id: userId }, JWT_KEY, {
+		expiresIn: "5d",
+	});
 	res.cookie("auth_token", token, {
 		...AUTH_TOKEN_COOKIE_OPTIONS,
 		maxAge: AUTH_TOKEN_MAX_AGE_MS,
@@ -88,7 +91,9 @@ function getLoginRedirectPath(req, message) {
 
 function getUserFromDecodedToken(decoded) {
 	if (decoded?.id) {
-		return db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
+		return db
+			.query("SELECT * FROM users WHERE id = $id")
+			.get({ id: decoded.id });
 	}
 	return db.query("SELECT * FROM users WHERE username = $username").get({
 		username: decoded?.username,
@@ -96,7 +101,7 @@ function getUserFromDecodedToken(decoded) {
 }
 
 function getAuthSession(req) {
-	const token = req.cookies && req.cookies.auth_token;
+	const token = req.cookies?.auth_token;
 	if (!token) {
 		return { status: "missing" };
 	}
@@ -125,7 +130,11 @@ function getAuthSession(req) {
 // Middleware to authenticate using JWT token (from cookies)
 async function authenticateToken(req, res, next) {
 	const remoteGroups = parseRemoteGroups(req);
-	const isAdminFromHeaders = remoteGroups.includes(process.env.ADMIN_GROUP || "admin") ? 1 : 0;
+	const isAdminFromHeaders = remoteGroups.includes(
+		process.env.ADMIN_GROUP || "admin",
+	)
+		? 1
+		: 0;
 
 	if (!req.cookies?.auth_token) {
 		logger.debug("No token found, redirecting to login.");
@@ -149,7 +158,10 @@ async function authenticateToken(req, res, next) {
 		return res.redirect("/login?message=Database error.");
 	}
 	if (session.status === "missing_user") {
-		logger.debug("User not found in database for token:", session.decoded?.username);
+		logger.debug(
+			"User not found in database for token:",
+			session.decoded?.username,
+		);
 		clearAuthTokenCookie(res);
 		return res.redirect(getLoginRedirectPath(req, "User not found."));
 	}
@@ -167,8 +179,13 @@ async function authenticateToken(req, res, next) {
 	// If Remote Header SSO is enabled, keep isAdmin in sync with the header.
 	if (isRemoteHeaderLoginEnabled() && remoteGroups.length > 0) {
 		const groupsStr = groupsJson(remoteGroups);
-		if (dbUser.isAdmin !== isAdminFromHeaders || (dbUser.groups || "[]") !== groupsStr) {
-			db.query("UPDATE users SET isAdmin = $isAdmin, groups = $groups WHERE id = $id").run({
+		if (
+			dbUser.isAdmin !== isAdminFromHeaders ||
+			(dbUser.groups || "[]") !== groupsStr
+		) {
+			db.query(
+				"UPDATE users SET isAdmin = $isAdmin, groups = $groups WHERE id = $id",
+			).run({
 				isAdmin: isAdminFromHeaders,
 				groups: groupsStr,
 				id: dbUser.id,
@@ -176,7 +193,9 @@ async function authenticateToken(req, res, next) {
 			// Update in-memory copy for rendering
 			dbUser.isAdmin = isAdminFromHeaders;
 			dbUser.groups = groupsStr;
-			logger.debug(`Updated isAdmin/groups from Remote Header for ${dbUser.username} (${dbUser.id}).`);
+			logger.debug(
+				`Updated isAdmin/groups from Remote Header for ${dbUser.username} (${dbUser.id}).`,
+			);
 		}
 	}
 
@@ -191,7 +210,10 @@ async function authenticateToken(req, res, next) {
 		}
 	} catch (err) {
 		// Graceful degradation: do not kill the request
-		logger.warn("OIDC refresh attempt failed; continuing without refresh.", err);
+		logger.warn(
+			"OIDC refresh attempt failed; continuing without refresh.",
+			err,
+		);
 	}
 
 	req.user = dbUser;
@@ -201,7 +223,11 @@ async function authenticateToken(req, res, next) {
 // Middleware to authenticate admin (checks if user has admin privileges)
 async function authenticateAdmin(req, res, next) {
 	const remoteGroups = parseRemoteGroups(req);
-	const isAdminFromHeaders = remoteGroups.includes(process.env.ADMIN_GROUP || "admin") ? 1 : 0;
+	const isAdminFromHeaders = remoteGroups.includes(
+		process.env.ADMIN_GROUP || "admin",
+	)
+		? 1
+		: 0;
 
 	if (!req.cookies?.auth_token) {
 		logger.debug("No token found, redirecting to login for admin.");
@@ -225,7 +251,10 @@ async function authenticateAdmin(req, res, next) {
 		return res.redirect("/login?message=Database error.");
 	}
 	if (session.status === "missing_user") {
-		logger.debug("Admin user not found in database for token:", session.decoded?.username);
+		logger.debug(
+			"Admin user not found in database for token:",
+			session.decoded?.username,
+		);
 		clearAuthTokenCookie(res);
 		return res.redirect(getLoginRedirectPath(req, "Admin user not found."));
 	}
@@ -235,8 +264,13 @@ async function authenticateAdmin(req, res, next) {
 
 	if (isRemoteHeaderLoginEnabled() && remoteGroups.length > 0) {
 		const groupsStr = groupsJson(remoteGroups);
-		if (dbUser.isAdmin !== isAdminFromHeaders || (dbUser.groups || "[]") !== groupsStr) {
-			db.query("UPDATE users SET isAdmin = $isAdmin, groups = $groups WHERE id = $id").run({
+		if (
+			dbUser.isAdmin !== isAdminFromHeaders ||
+			(dbUser.groups || "[]") !== groupsStr
+		) {
+			db.query(
+				"UPDATE users SET isAdmin = $isAdmin, groups = $groups WHERE id = $id",
+			).run({
 				isAdmin: isAdminFromHeaders,
 				groups: groupsStr,
 				id: dbUser.id,
@@ -256,7 +290,10 @@ async function authenticateAdmin(req, res, next) {
 			}
 		}
 	} catch (err) {
-		logger.warn("OIDC refresh attempt failed; continuing without refresh.", err);
+		logger.warn(
+			"OIDC refresh attempt failed; continuing without refresh.",
+			err,
+		);
 	}
 
 	req.user = dbUser;

@@ -1,6 +1,6 @@
 const express = require("express");
 const he = require("he");
-const crypto = require('crypto');
+const crypto = require("node:crypto");
 const geddit = require("../geddit.js");
 const { db } = require("../db");
 const {
@@ -46,12 +46,16 @@ function isRemoteHeaderLoginEnabled() {
 }
 
 function getRemoteHeaderUser(req) {
-	const raw = firstValue(req.headers["remote-user"] || req.headers["http_auth_user"]);
+	const raw = firstValue(
+		req.headers["remote-user"] || req.headers.http_auth_user,
+	);
 	return typeof raw === "string" ? raw.trim() : "";
 }
 
 function getRemoteHeaderGroups(req) {
-	const raw = firstValue(req.headers["remote-groups"] || req.headers["http_remote_groups"]);
+	const raw = firstValue(
+		req.headers["remote-groups"] || req.headers.http_remote_groups,
+	);
 	if (typeof raw !== "string" || !raw.trim()) return [];
 	return raw
 		.split(",")
@@ -71,7 +75,8 @@ function getSafeRedirectTarget(value, fallback = SAFE_REDIRECT_FALLBACK) {
 	const raw = firstValue(value);
 	if (typeof raw !== "string") return fallback;
 	const trimmed = raw.trim();
-	if (!trimmed || !trimmed.startsWith("/") || trimmed.startsWith("//")) return fallback;
+	if (!trimmed || !trimmed.startsWith("/") || trimmed.startsWith("//"))
+		return fallback;
 	if (trimmed.includes("\\") || trimmed.includes("\0")) return fallback;
 
 	try {
@@ -122,80 +127,94 @@ function sanitizeThingId(value) {
 }
 
 function generateRandomPassword(length = 12) {
-  const bytes = crypto.randomBytes(length);
-  return bytes.toString('base64').slice(0, length);  // Convert to base64 and slice to desired length
+	const bytes = crypto.randomBytes(length);
+	return bytes.toString("base64").slice(0, length); // Convert to base64 and slice to desired length
 }
 
 // Middleware to check if user is logged in via HTTP headers
 async function loginViaHeaders(req, res, next) {
-  const remoteUser = getRemoteHeaderUser(req);
-  const remoteGroups = getRemoteHeaderGroups(req);
+	const remoteUser = getRemoteHeaderUser(req);
+	const remoteGroups = getRemoteHeaderGroups(req);
 
-  if (!isRemoteHeaderLoginEnabled() || !remoteUser || !isTrustedRemoteHeaderSource(req)) {
-    if (isRemoteHeaderLoginEnabled() && remoteUser) {
-      logger.warn("Ignoring remote header login from untrusted source");
-    } else if (isRemoteHeaderLoginEnabled()) {
-      logger.debug("Remote user header missing");
-    }
-    return res.redirect("/login");
-  }
+	if (
+		!isRemoteHeaderLoginEnabled() ||
+		!remoteUser ||
+		!isTrustedRemoteHeaderSource(req)
+	) {
+		if (isRemoteHeaderLoginEnabled() && remoteUser) {
+			logger.warn("Ignoring remote header login from untrusted source");
+		} else if (isRemoteHeaderLoginEnabled()) {
+			logger.debug("Remote user header missing");
+		}
+		return res.redirect("/login");
+	}
 
-  // If remoteUser is present, set user info and validate
-  req.user = {
-    username: remoteUser,  // Store username in req.user
-    isAdmin: remoteGroups.includes(process.env.ADMIN_GROUP || 'admin'),  // Check if user is an admin
-    validated: true,  // Flag to mark user as validated via headers
-  };
+	// If remoteUser is present, set user info and validate
+	req.user = {
+		username: remoteUser, // Store username in req.user
+		isAdmin: remoteGroups.includes(process.env.ADMIN_GROUP || "admin"), // Check if user is an admin
+		validated: true, // Flag to mark user as validated via headers
+	};
 
-  // Check if the user already exists in the database
-  let existingUser = db.query("SELECT * FROM users WHERE username = $username").get({ username: remoteUser });
+	// Check if the user already exists in the database
+	const existingUser = db
+		.query("SELECT * FROM users WHERE username = $username")
+		.get({ username: remoteUser });
 
-  if (!existingUser) {
-    // If user does not exist, automatically register them
-    try {
-      const randomPassword = generateRandomPassword(52);
-      const hashedPassword = await Bun.password.hash(randomPassword);  // Hash the random password
+	if (!existingUser) {
+		// If user does not exist, automatically register them
+		try {
+			const randomPassword = generateRandomPassword(52);
+			const hashedPassword = await Bun.password.hash(randomPassword); // Hash the random password
 
-      const insertedRecord = db.query(
-        "INSERT INTO users (username, password_hash, isAdmin, groups) VALUES ($username, $hashedPassword, $isAdmin, $groups)"
-      ).run({
-        username: remoteUser,
-        hashedPassword,
-        isAdmin: req.user.isAdmin ? 1 : 0,
-        groups: JSON.stringify(remoteGroups),
-      });
+			const insertedRecord = db
+				.query(
+					"INSERT INTO users (username, password_hash, isAdmin, groups) VALUES ($username, $hashedPassword, $isAdmin, $groups)",
+				)
+				.run({
+					username: remoteUser,
+					hashedPassword,
+					isAdmin: req.user.isAdmin ? 1 : 0,
+					groups: JSON.stringify(remoteGroups),
+				});
 
-      const userId = insertedRecord.lastInsertRowid;
-      setAuthTokenCookie(res, remoteUser, userId);
+			const userId = insertedRecord.lastInsertRowid;
+			setAuthTokenCookie(res, remoteUser, userId);
 
-      const redirectTo = getRequestedRedirect(req);
-      return res.redirect(redirectTo);
-    } catch (error) {
-      logger.error("Error creating user from headers:", error);
-      return res.render("login", { message: "Error creating account, please try again." });
-    }
-  } else {
-    // Set user id from the database record
-    req.user.id = existingUser.id;
+			const redirectTo = getRequestedRedirect(req);
+			return res.redirect(redirectTo);
+		} catch (error) {
+			logger.error("Error creating user from headers:", error);
+			return res.render("login", {
+				message: "Error creating account, please try again.",
+			});
+		}
+	} else {
+		// Set user id from the database record
+		req.user.id = existingUser.id;
 
-    // Keep isAdmin/groups in sync with remote headers
-    if (remoteGroups.length > 0) {
-      const newGroups = JSON.stringify(remoteGroups);
-      const isAdmin = req.user.isAdmin ? 1 : 0;
-      if (existingUser.isAdmin !== isAdmin || (existingUser.groups || "[]") !== newGroups) {
-        db.query("UPDATE users SET isAdmin = $isAdmin, groups = $groups WHERE id = $id")
-          .run({
-            isAdmin,
-            groups: newGroups,
-            id: req.user.id,
-          });
-      }
-    }
+		// Keep isAdmin/groups in sync with remote headers
+		if (remoteGroups.length > 0) {
+			const newGroups = JSON.stringify(remoteGroups);
+			const isAdmin = req.user.isAdmin ? 1 : 0;
+			if (
+				existingUser.isAdmin !== isAdmin ||
+				(existingUser.groups || "[]") !== newGroups
+			) {
+				db.query(
+					"UPDATE users SET isAdmin = $isAdmin, groups = $groups WHERE id = $id",
+				).run({
+					isAdmin,
+					groups: newGroups,
+					id: req.user.id,
+				});
+			}
+		}
 
-    setAuthTokenCookie(res, remoteUser, existingUser.id);
-    const redirectTo = getRequestedRedirect(req);
-    return res.redirect(redirectTo);
-  }
+		setAuthTokenCookie(res, remoteUser, existingUser.id);
+		const redirectTo = getRequestedRedirect(req);
+		return res.redirect(redirectTo);
+	}
 }
 
 const commonRenderOptions = {
@@ -218,7 +237,7 @@ router.get("/", authenticateToken, async (req, res) => {
 
 	// If no subscriptions, redirect to /r/all
 	if (subs.length === 0) {
-		const qs = "?" + new URLSearchParams(query).toString();
+		const qs = `?${new URLSearchParams(query).toString()}`;
 		return res.redirect(`/r/all${qs}`);
 	}
 
@@ -231,7 +250,7 @@ router.get("/", authenticateToken, async (req, res) => {
 	const aboutReq = G.getSubreddit(subreddit);
 	const [posts, about] = await Promise.all([postsReq, aboutReq]);
 
-	if (query.view == "card" && posts && posts.posts) {
+	if (query.view === "card" && posts && posts.posts) {
 		posts.posts.forEach(unescape_selftext);
 	}
 
@@ -264,17 +283,21 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
 		query.view = "compact";
 	}
 
-  let isSubbed = false;
-  if (!isMulti) {
-    isSubbed = db.query("SELECT * FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit")
-                 .get({ id: req.user.id, subreddit }) !== null;
-  }
+	let isSubbed = false;
+	if (!isMulti) {
+		isSubbed =
+			db
+				.query(
+					"SELECT * FROM subscriptions WHERE user_id = $id AND subreddit = $subreddit",
+				)
+				.get({ id: req.user.id, subreddit }) !== null;
+	}
 
-  const postsReq = G.getSubmissions(query.sort, subreddit, query);
-  const aboutReq = G.getSubreddit(subreddit);
-  const [posts, about] = await Promise.all([postsReq, aboutReq]);
+	const postsReq = G.getSubmissions(query.sort, subreddit, query);
+	const aboutReq = G.getSubreddit(subreddit);
+	const [posts, about] = await Promise.all([postsReq, aboutReq]);
 
-	if (query.view == "card" && posts && posts.posts) {
+	if (query.view === "card" && posts && posts.posts) {
 		posts.posts.forEach(unescape_selftext);
 	}
 
@@ -320,22 +343,26 @@ router.get("/api/r/:subreddit/posts", authenticateToken, async (req, res) => {
 
 	const posts = await G.getSubmissions(query.sort, subreddit, query);
 
-	if (query.view == "card" && posts && posts.posts) {
+	if (query.view === "card" && posts && posts.posts) {
 		posts.posts.forEach(unescape_selftext);
 	}
 
 	// Render posts as HTML partial
 	const html = await new Promise((resolve, reject) => {
-		res.render("posts-partial", {
-			posts: posts ? posts.posts : [],
-			query,
-			currentUrl: req.query.currentUrl || req.originalUrl,
-			user: req.user,
-			...commonRenderOptions,
-		}, (err, html) => {
-			if (err) reject(err);
-			else resolve(html);
-		});
+		res.render(
+			"posts-partial",
+			{
+				posts: posts ? posts.posts : [],
+				query,
+				currentUrl: req.query.currentUrl || req.originalUrl,
+				user: req.user,
+				...commonRenderOptions,
+			},
+			(err, html) => {
+				if (err) reject(err);
+				else resolve(html);
+			},
+		);
 	});
 
 	// Return JSON with HTML and after cursor
@@ -379,7 +406,11 @@ router.get(
 		const params = {
 			limit: 50,
 		};
-		const response = await G.getSingleCommentThread(parent_id, child_id, params);
+		const response = await G.getSingleCommentThread(
+			parent_id,
+			child_id,
+			params,
+		);
 		const comments = response.comments;
 		comments.forEach(unescape_comment);
 		res.render("single_comment_thread", {
@@ -454,7 +485,7 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 				? "no results found"
 				: `showing ${items.length} results`;
 
-		if (req.query.view == "card" && items) {
+		if (req.query.view === "card" && items) {
 			items.forEach(unescape_selftext);
 		}
 
@@ -512,12 +543,18 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
 // POST /update-preferences
 router.post("/update-preferences", authenticateToken, async (req, res) => {
-	const { infiniteScroll, useClassicLayout, themePreference, highResThumbnails, showNsfwThumbnails } = req.body;
+	const {
+		infiniteScroll,
+		useClassicLayout,
+		themePreference,
+		highResThumbnails,
+		showNsfwThumbnails,
+	} = req.body;
 	const infiniteScrollValue = infiniteScroll === "1" ? 1 : 0;
 	const useClassicLayoutValue = useClassicLayout === "1" ? 1 : 0;
 	const highResThumbnailsValue = highResThumbnails === "1" ? 1 : 0;
 	const showNsfwThumbnailsValue = showNsfwThumbnails === "1" ? 1 : 0;
-	const themeValue = themePreference || 'auto';
+	const themeValue = themePreference || "auto";
 
 	logger.debug("Received preferences:", {
 		infiniteScroll,
@@ -532,23 +569,31 @@ router.post("/update-preferences", authenticateToken, async (req, res) => {
 			highResThumbnailsValue,
 			showNsfwThumbnailsValue,
 		},
-		userId: req.user.id
+		userId: req.user.id,
 	});
 
 	try {
-		const result = db.query("UPDATE users SET infiniteScroll = $infiniteScroll, useClassicLayout = $useClassicLayout, themePreference = $themePreference, highResThumbnails = $highResThumbnails, showNsfwThumbnails = $showNsfwThumbnails WHERE id = $id").run({
-			infiniteScroll: infiniteScrollValue,
-			useClassicLayout: useClassicLayoutValue,
-			themePreference: themeValue,
-			highResThumbnails: highResThumbnailsValue,
-			showNsfwThumbnails: showNsfwThumbnailsValue,
-			id: req.user.id,
-		});
+		const result = db
+			.query(
+				"UPDATE users SET infiniteScroll = $infiniteScroll, useClassicLayout = $useClassicLayout, themePreference = $themePreference, highResThumbnails = $highResThumbnails, showNsfwThumbnails = $showNsfwThumbnails WHERE id = $id",
+			)
+			.run({
+				infiniteScroll: infiniteScrollValue,
+				useClassicLayout: useClassicLayoutValue,
+				themePreference: themeValue,
+				highResThumbnails: highResThumbnailsValue,
+				showNsfwThumbnails: showNsfwThumbnailsValue,
+				id: req.user.id,
+			});
 
 		logger.debug("Update result:", result);
 
 		// Verify the update
-		const updatedUser = db.query("SELECT infiniteScroll, useClassicLayout, themePreference, highResThumbnails, showNsfwThumbnails FROM users WHERE id = $id").get({ id: req.user.id });
+		const updatedUser = db
+			.query(
+				"SELECT infiniteScroll, useClassicLayout, themePreference, highResThumbnails, showNsfwThumbnails FROM users WHERE id = $id",
+			)
+			.get({ id: req.user.id });
 		logger.debug("User after update:", updatedUser);
 
 		return res.redirect("/dashboard");
@@ -645,11 +690,11 @@ router.post("/register", validateInviteToken, async (req, res) => {
 				"INSERT INTO users (username, password_hash, isAdmin, groups) VALUES ($username, $hashedPassword, $isAdmin, $groups)",
 			)
 			.run({
-			username,
-			hashedPassword,
-			isAdmin: req.isFirstUser ? 1 : 0,
-			groups: "[]",
-		});
+				username,
+				hashedPassword,
+				isAdmin: req.isFirstUser ? 1 : 0,
+				groups: "[]",
+			});
 		const id = insertedRecord.lastInsertRowid;
 		setAuthTokenCookie(res, username, id);
 		res.status(200).redirect("/");
@@ -661,280 +706,350 @@ router.post("/register", validateInviteToken, async (req, res) => {
 	}
 });
 
-
-
 // OIDC routes (PKCE)
 router.get("/auth/oidc/login", async (req, res) => {
-  logger.debug(`[OIDC] /auth/oidc/login hit, OIDC enabled: ${oidc.isOIDCEnabled()}`);
+	logger.debug(
+		`[OIDC] /auth/oidc/login hit, OIDC enabled: ${oidc.isOIDCEnabled()}`,
+	);
 
-  if (!oidc.isOIDCEnabled()) {
-    logger.warn("[OIDC] OIDC not enabled, redirecting to login with bypass");
-    return res.redirect("/login?bypass_oidc=true&message=OIDC not configured");
-  }
+	if (!oidc.isOIDCEnabled()) {
+		logger.warn("[OIDC] OIDC not enabled, redirecting to login with bypass");
+		return res.redirect("/login?bypass_oidc=true&message=OIDC not configured");
+	}
 
-  const redirectAfterLogin = getSafeRedirectTarget(req.query.redirect, "/");
-  logger.debug(`[OIDC] Generating authorization URL, redirectAfterLogin: ${redirectAfterLogin}`);
+	const redirectAfterLogin = getSafeRedirectTarget(req.query.redirect, "/");
+	logger.debug(
+		`[OIDC] Generating authorization URL, redirectAfterLogin: ${redirectAfterLogin}`,
+	);
 
-  try {
-    const { authorizationUrl, state, nonce, code_verifier, redirectAfterLogin: ra } = await oidc.getAuthorizationUrl({
-      redirectAfterLogin,
-    });
+	try {
+		const {
+			authorizationUrl,
+			state,
+			nonce,
+			code_verifier,
+			redirectAfterLogin: ra,
+		} = await oidc.getAuthorizationUrl({
+			redirectAfterLogin,
+		});
 
-    logger.debug(`[OIDC] Authorization URL generated: ${authorizationUrl}`);
-    logger.debug(`[OIDC] Setting cookies: state, nonce, verifier (length: ${code_verifier.length}), redirect: ${ra}`);
+		logger.debug(`[OIDC] Authorization URL generated: ${authorizationUrl}`);
+		logger.debug(
+			`[OIDC] Setting cookies: state, nonce, verifier (length: ${code_verifier.length}), redirect: ${ra}`,
+		);
 
-    // IMPORTANT: SameSite must be Lax (not Strict) so cookies are sent on the cross-site callback redirect.
-    const cookieOptions = {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Lax",
-      maxAge: 10 * 60 * 1000, // 10 minutes
-      path: "/auth/oidc",
-    };
+		// IMPORTANT: SameSite must be Lax (not Strict) so cookies are sent on the cross-site callback redirect.
+		const cookieOptions = {
+			httpOnly: true,
+			secure: true,
+			sameSite: "Lax",
+			maxAge: 10 * 60 * 1000, // 10 minutes
+			path: "/auth/oidc",
+		};
 
-    res.cookie("oidc_state", state, cookieOptions);
-    res.cookie("oidc_nonce", nonce, cookieOptions);
-    res.cookie("oidc_verifier", code_verifier, cookieOptions);
-    res.cookie("oidc_redirect", ra, cookieOptions);
+		res.cookie("oidc_state", state, cookieOptions);
+		res.cookie("oidc_nonce", nonce, cookieOptions);
+		res.cookie("oidc_verifier", code_verifier, cookieOptions);
+		res.cookie("oidc_redirect", ra, cookieOptions);
 
-    logger.debug(`[OIDC] Redirecting to IdP authorization URL`);
-    res.redirect(authorizationUrl);
-  } catch (err) {
-    logger.error("[OIDC] Failed to start OIDC login:", err);
-    return res.redirect("/login?bypass_oidc=true&message=Failed to start OIDC login");
-  }
+		logger.debug("[OIDC] Redirecting to IdP authorization URL");
+		res.redirect(authorizationUrl);
+	} catch (err) {
+		logger.error("[OIDC] Failed to start OIDC login:", err);
+		return res.redirect(
+			"/login?bypass_oidc=true&message=Failed to start OIDC login",
+		);
+	}
 });
 
 router.get("/auth/oidc/callback", async (req, res) => {
-  if (!oidc.isOIDCEnabled()) {
-    return res.redirect("/login?bypass_oidc=true&message=OIDC not configured");
-  }
+	if (!oidc.isOIDCEnabled()) {
+		return res.redirect("/login?bypass_oidc=true&message=OIDC not configured");
+	}
 
-  const state = req.cookies?.oidc_state;
-  const nonce = req.cookies?.oidc_nonce;
-  const code_verifier = req.cookies?.oidc_verifier;
-  const redirectAfterLogin = getSafeRedirectTarget(req.cookies?.oidc_redirect, "/");
+	const state = req.cookies?.oidc_state;
+	const nonce = req.cookies?.oidc_nonce;
+	const code_verifier = req.cookies?.oidc_verifier;
+	const redirectAfterLogin = getSafeRedirectTarget(
+		req.cookies?.oidc_redirect,
+		"/",
+	);
 
-  logger.debug('[OIDC] Callback received - cookies present:', {
-    state: !!state,
-    nonce: !!nonce,
-    code_verifier: !!code_verifier,
-  });
-  if (code_verifier) {
-    logger.debug(`[OIDC] Cookie code_verifier length: ${code_verifier.length}, first 20 chars: ${code_verifier.substring(0, 20)}...`);
-  }
+	logger.debug("[OIDC] Callback received - cookies present:", {
+		state: !!state,
+		nonce: !!nonce,
+		code_verifier: !!code_verifier,
+	});
+	if (code_verifier) {
+		logger.debug(
+			`[OIDC] Cookie code_verifier length: ${code_verifier.length}, first 20 chars: ${code_verifier.substring(0, 20)}...`,
+		);
+	}
 
-  // Clear transient cookies regardless
-  res.clearCookie("oidc_state", { path: "/auth/oidc" });
-  res.clearCookie("oidc_nonce", { path: "/auth/oidc" });
-  res.clearCookie("oidc_verifier", { path: "/auth/oidc" });
-  res.clearCookie("oidc_redirect", { path: "/auth/oidc" });
+	// Clear transient cookies regardless
+	res.clearCookie("oidc_state", { path: "/auth/oidc" });
+	res.clearCookie("oidc_nonce", { path: "/auth/oidc" });
+	res.clearCookie("oidc_verifier", { path: "/auth/oidc" });
+	res.clearCookie("oidc_redirect", { path: "/auth/oidc" });
 
-  try {
-    if (!state || !nonce || !code_verifier) {
-      logger.warn('OIDC callback missing cookies - state:', !!state, 'nonce:', !!nonce, 'code_verifier:', !!code_verifier);
-      return res.redirect("/login?bypass_oidc=true&message=OIDC session expired, try again");
-    }
+	try {
+		if (!state || !nonce || !code_verifier) {
+			logger.warn(
+				"OIDC callback missing cookies - state:",
+				!!state,
+				"nonce:",
+				!!nonce,
+				"code_verifier:",
+				!!code_verifier,
+			);
+			return res.redirect(
+				"/login?bypass_oidc=true&message=OIDC session expired, try again",
+			);
+		}
 
-    const { tokenSet, claims } = await oidc.handleCallback(req, {
-      state,
-      nonce,
-      code_verifier,
-    });
+		const { tokenSet, claims } = await oidc.handleCallback(req, {
+			state,
+			nonce,
+			code_verifier,
+		});
 
-    // handleCallback already validates that sub exists, so we can use it directly
-    const sub = claims.sub;
-    logger.info(`[OIDC] Callback successful for sub: ${sub}`);
+		// handleCallback already validates that sub exists, so we can use it directly
+		const sub = claims.sub;
+		logger.info(`[OIDC] Callback successful for sub: ${sub}`);
 
-    const groups = oidc.extractGroupsFromClaims(claims);
-    if (!oidc.isAllowedByGroups(groups)) {
-      return res.redirect("/login?bypass_oidc=true&message=Not allowed (missing required group)");
-    }
+		const groups = oidc.extractGroupsFromClaims(claims);
+		if (!oidc.isAllowedByGroups(groups)) {
+			return res.redirect(
+				"/login?bypass_oidc=true&message=Not allowed (missing required group)",
+			);
+		}
 
-    const isFirstUser = db.query("SELECT 1 FROM users LIMIT 1").get() === null;
-    const firstUserAdmin = process.env.OIDC_FIRST_USER_ADMIN === undefined
-      ? true
-      : String(process.env.OIDC_FIRST_USER_ADMIN).toLowerCase() === "true" || process.env.OIDC_FIRST_USER_ADMIN === "1";
+		const isFirstUser = db.query("SELECT 1 FROM users LIMIT 1").get() === null;
+		const firstUserAdmin =
+			process.env.OIDC_FIRST_USER_ADMIN === undefined
+				? true
+				: String(process.env.OIDC_FIRST_USER_ADMIN).toLowerCase() === "true" ||
+					process.env.OIDC_FIRST_USER_ADMIN === "1";
 
-    let isAdmin = oidc.isAdminFromClaims(claims, groups) ? 1 : 0;
-    if (isFirstUser && firstUserAdmin) isAdmin = 1;
+		let isAdmin = oidc.isAdminFromClaims(claims, groups) ? 1 : 0;
+		if (isFirstUser && firstUserAdmin) isAdmin = 1;
 
-    const autoRegister = process.env.OIDC_AUTO_REGISTER === undefined
-      ? true
-      : String(process.env.OIDC_AUTO_REGISTER).toLowerCase() === "true" || process.env.OIDC_AUTO_REGISTER === "1";
+		const autoRegister =
+			process.env.OIDC_AUTO_REGISTER === undefined
+				? true
+				: String(process.env.OIDC_AUTO_REGISTER).toLowerCase() === "true" ||
+					process.env.OIDC_AUTO_REGISTER === "1";
 
-    let user = db.query("SELECT * FROM users WHERE oidc_sub = $sub").get({ sub });
+		const user = db
+			.query("SELECT * FROM users WHERE oidc_sub = $sub")
+			.get({ sub });
 
-    const expiresAt = oidc.computeExpiresAtSeconds(tokenSet);
-    const encRefresh = tokenSet.refresh_token ? oidc.encryptRefreshToken(tokenSet.refresh_token) : null;
+		const expiresAt = oidc.computeExpiresAtSeconds(tokenSet);
+		const encRefresh = tokenSet.refresh_token
+			? oidc.encryptRefreshToken(tokenSet.refresh_token)
+			: null;
 
-    if (!user) {
-      // Check if there's an existing user with matching username (account linking)
-      let desiredUsername = oidc.resolveUsernameFromClaims(claims) || sub;
-      desiredUsername = String(desiredUsername).trim();
+		if (!user) {
+			// Check if there's an existing user with matching username (account linking)
+			let desiredUsername = oidc.resolveUsernameFromClaims(claims) || sub;
+			desiredUsername = String(desiredUsername).trim();
 
-      const existingByUsername = db.query("SELECT * FROM users WHERE username = $username").get({
-        username: desiredUsername,
-      });
+			const existingByUsername = db
+				.query("SELECT * FROM users WHERE username = $username")
+				.get({
+					username: desiredUsername,
+				});
 
-      if (existingByUsername) {
-        // Link existing password account to OIDC
-        logger.info(`Linking existing user '${desiredUsername}' to OIDC sub: ${sub}`);
+			if (existingByUsername) {
+				// Link existing password account to OIDC
+				logger.info(
+					`Linking existing user '${desiredUsername}' to OIDC sub: ${sub}`,
+				);
 
-        db.query(
-          "UPDATE users SET oidc_sub = $sub, oidc_refresh_token = $rt, oidc_token_expires_at = $exp, isAdmin = $isAdmin, groups = $groups WHERE id = $id"
-        ).run({
-          sub,
-          rt: encRefresh,
-          exp: expiresAt,
-          isAdmin,
-          groups: JSON.stringify(groups),
-          id: existingByUsername.id,
-        });
+				db.query(
+					"UPDATE users SET oidc_sub = $sub, oidc_refresh_token = $rt, oidc_token_expires_at = $exp, isAdmin = $isAdmin, groups = $groups WHERE id = $id",
+				).run({
+					sub,
+					rt: encRefresh,
+					exp: expiresAt,
+					isAdmin,
+					groups: JSON.stringify(groups),
+					id: existingByUsername.id,
+				});
 
-        setAuthTokenCookie(res, existingByUsername.username, existingByUsername.id);
-        return res.redirect(redirectAfterLogin);
-      }
+				setAuthTokenCookie(
+					res,
+					existingByUsername.username,
+					existingByUsername.id,
+				);
+				return res.redirect(redirectAfterLogin);
+			}
 
-      // No existing user - create new if auto-register enabled
-      if (!autoRegister) {
-        return res.redirect("/login?bypass_oidc=true&message=Account not registered");
-      }
+			// No existing user - create new if auto-register enabled
+			if (!autoRegister) {
+				return res.redirect(
+					"/login?bypass_oidc=true&message=Account not registered",
+				);
+			}
 
-      const randomPassword = generateRandomPassword(52);
-      const hashedPassword = await Bun.password.hash(randomPassword);
+			const randomPassword = generateRandomPassword(52);
+			const hashedPassword = await Bun.password.hash(randomPassword);
 
-      const insertedRecord = db.query(
-        "INSERT INTO users (username, password_hash, isAdmin, oidc_sub, oidc_refresh_token, oidc_token_expires_at, groups) VALUES ($username, $hashedPassword, $isAdmin, $oidc_sub, $oidc_refresh_token, $oidc_token_expires_at, $groups)"
-      ).run({
-        username: desiredUsername,
-        hashedPassword,
-        isAdmin,
-        oidc_sub: sub,
-        oidc_refresh_token: encRefresh,
-        oidc_token_expires_at: expiresAt,
-        groups: JSON.stringify(groups),
-      });
+			const insertedRecord = db
+				.query(
+					"INSERT INTO users (username, password_hash, isAdmin, oidc_sub, oidc_refresh_token, oidc_token_expires_at, groups) VALUES ($username, $hashedPassword, $isAdmin, $oidc_sub, $oidc_refresh_token, $oidc_token_expires_at, $groups)",
+				)
+				.run({
+					username: desiredUsername,
+					hashedPassword,
+					isAdmin,
+					oidc_sub: sub,
+					oidc_refresh_token: encRefresh,
+					oidc_token_expires_at: expiresAt,
+					groups: JSON.stringify(groups),
+				});
 
-      const userId = insertedRecord.lastInsertRowid;
-      logger.info(`Created new OIDC user '${desiredUsername}' with sub: ${sub}`);
-      setAuthTokenCookie(res, desiredUsername, userId);
-      return res.redirect(redirectAfterLogin);
-    }
+			const userId = insertedRecord.lastInsertRowid;
+			logger.info(
+				`Created new OIDC user '${desiredUsername}' with sub: ${sub}`,
+			);
+			setAuthTokenCookie(res, desiredUsername, userId);
+			return res.redirect(redirectAfterLogin);
+		}
 
-    // Existing OIDC user: update admin/groups and rotate refresh token if provided
-    const baseSql = "UPDATE users SET isAdmin = $isAdmin, groups = $groups, oidc_token_expires_at = $exp";
-    const sql = encRefresh ? (baseSql + ", oidc_refresh_token = $rt WHERE id = $id") : (baseSql + " WHERE id = $id");
+		// Existing OIDC user: update admin/groups and rotate refresh token if provided
+		const baseSql =
+			"UPDATE users SET isAdmin = $isAdmin, groups = $groups, oidc_token_expires_at = $exp";
+		const sql = encRefresh
+			? `${baseSql}, oidc_refresh_token = $rt WHERE id = $id`
+			: `${baseSql} WHERE id = $id`;
 
-    const params = {
-      isAdmin,
-      groups: JSON.stringify(groups),
-      exp: expiresAt,
-      id: user.id,
-    };
-    if (encRefresh) params.rt = encRefresh;
+		const params = {
+			isAdmin,
+			groups: JSON.stringify(groups),
+			exp: expiresAt,
+			id: user.id,
+		};
+		if (encRefresh) params.rt = encRefresh;
 
-    db.query(sql).run(params);
+		db.query(sql).run(params);
 
-    setAuthTokenCookie(res, user.username, user.id);
-    return res.redirect(redirectAfterLogin);
-  } catch (err) {
-    logger.error("OIDC callback failed", err);
-    return res.redirect("/login?bypass_oidc=true&message=OIDC login failed");
-  }
+		setAuthTokenCookie(res, user.username, user.id);
+		return res.redirect(redirectAfterLogin);
+	} catch (err) {
+		logger.error("OIDC callback failed", err);
+		return res.redirect("/login?bypass_oidc=true&message=OIDC login failed");
+	}
 });
 
 // GET /login
 router.get("/login", async (req, res, next) => {
-  const redirectTo = getRequestedRedirect(req);
-  let bypassOidc = String(req.query.bypass_oidc || "").toLowerCase() === "true" || req.query.bypass_oidc === "1";
-  let message = req.query.message;
+	const redirectTo = getRequestedRedirect(req);
+	const bypassOidc =
+		String(req.query.bypass_oidc || "").toLowerCase() === "true" ||
+		req.query.bypass_oidc === "1";
+	let message = req.query.message;
 
-  if (req.cookies?.auth_token) {
-    const session = getAuthSession(req);
-    if (session.status === "ok") {
-      return res.redirect("/");
-    }
+	if (req.cookies?.auth_token) {
+		const session = getAuthSession(req);
+		if (session.status === "ok") {
+			return res.redirect("/");
+		}
 
-    if (session.status === "expired") {
-      clearAuthTokenCookie(res);
-      if (!message) {
-        message = "Session expired";
-      }
-    } else if (session.status === "invalid") {
-      logger.warn("Ignoring invalid auth token on /login", session.error);
-      clearAuthTokenCookie(res);
-    } else if (session.status === "missing_user") {
-      logger.debug("Clearing auth token for missing user on /login:", session.decoded?.username);
-      clearAuthTokenCookie(res);
-      if (!message) {
-        message = "User not found.";
-      }
-    } else if (session.status === "db_error") {
-      logger.error("Failed to validate auth token on /login:", session.error);
-      return res.render("login", {
-        message: message || "Database error.",
-        oidcEnabled: oidc.isOIDCEnabled(),
-        redirect: redirectTo,
-        bypassOidc: true,
-        ...commonRenderOptions,
-      });
-    }
-  }
+		if (session.status === "expired") {
+			clearAuthTokenCookie(res);
+			if (!message) {
+				message = "Session expired";
+			}
+		} else if (session.status === "invalid") {
+			logger.warn("Ignoring invalid auth token on /login", session.error);
+			clearAuthTokenCookie(res);
+		} else if (session.status === "missing_user") {
+			logger.debug(
+				"Clearing auth token for missing user on /login:",
+				session.decoded?.username,
+			);
+			clearAuthTokenCookie(res);
+			if (!message) {
+				message = "User not found.";
+			}
+		} else if (session.status === "db_error") {
+			logger.error("Failed to validate auth token on /login:", session.error);
+			return res.render("login", {
+				message: message || "Database error.",
+				oidcEnabled: oidc.isOIDCEnabled(),
+				redirect: redirectTo,
+				bypassOidc: true,
+				...commonRenderOptions,
+			});
+		}
+	}
 
-  // Priority 1: OIDC
-  if (oidc.isOIDCEnabled() && !bypassOidc) {
-    logger.debug(`[LOGIN] OIDC enabled, redirecting to /auth/oidc/login with redirect=${redirectTo}`);
-    return res.redirect(`/auth/oidc/login?redirect=${encodeURIComponent(redirectTo)}`);
-  }
+	// Priority 1: OIDC
+	if (oidc.isOIDCEnabled() && !bypassOidc) {
+		logger.debug(
+			`[LOGIN] OIDC enabled, redirecting to /auth/oidc/login with redirect=${redirectTo}`,
+		);
+		return res.redirect(
+			`/auth/oidc/login?redirect=${encodeURIComponent(redirectTo)}`,
+		);
+	}
 
-  // Priority 2: Remote Header SSO
-  if (canUseRemoteHeaderLogin(req)) {
-    return loginViaHeaders(req, res, next);
-  }
-  if (isRemoteHeaderLoginEnabled() && getRemoteHeaderUser(req)) {
-    logger.warn("Remote header login header ignored because request source is not trusted");
-  }
+	// Priority 2: Remote Header SSO
+	if (canUseRemoteHeaderLogin(req)) {
+		return loginViaHeaders(req, res, next);
+	}
+	if (isRemoteHeaderLoginEnabled() && getRemoteHeaderUser(req)) {
+		logger.warn(
+			"Remote header login header ignored because request source is not trusted",
+		);
+	}
 
-  // Priority 3: Manual login
-  return res.render("login", {
-    message,
-    oidcEnabled: oidc.isOIDCEnabled(),
-    redirect: redirectTo,
-    bypassOidc,
-    ...commonRenderOptions,
-  });
+	// Priority 3: Manual login
+	return res.render("login", {
+		message,
+		oidcEnabled: oidc.isOIDCEnabled(),
+		redirect: redirectTo,
+		bypassOidc,
+		...commonRenderOptions,
+	});
 });
 
 // POST /login (form submission)
 router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+	const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.render("login", { message: "Both username and password are required." });
-  }
+	if (!username || !password) {
+		return res.render("login", {
+			message: "Both username and password are required.",
+		});
+	}
 
-  const user = db.query("SELECT * FROM users WHERE username = $username").get({ username });
+	const user = db
+		.query("SELECT * FROM users WHERE username = $username")
+		.get({ username });
 
-  if (user && (await Bun.password.verify(password, user.password_hash))) {
-    try {
-      setAuthTokenCookie(res, username, user.id);
-      const redirectTo = getRequestedRedirect(req);
-      return res.redirect(redirectTo);
-    } catch (error) {
-      logger.error("Error signing JWT:", error);
-      res.render("login", { message: "Something went wrong, try again later." });
-    }
-  } else {
-    // Invalid credentials
-    res.render("login", { message: "Invalid credentials, try again." });
-  }
+	if (user && (await Bun.password.verify(password, user.password_hash))) {
+		try {
+			setAuthTokenCookie(res, username, user.id);
+			const redirectTo = getRequestedRedirect(req);
+			return res.redirect(redirectTo);
+		} catch (error) {
+			logger.error("Error signing JWT:", error);
+			res.render("login", {
+				message: "Something went wrong, try again later.",
+			});
+		}
+	} else {
+		// Invalid credentials
+		res.render("login", { message: "Invalid credentials, try again." });
+	}
 });
 
 // GET /logout (clear JWT and log out user)
 router.get("/logout", (req, res) => {
-  clearAuthTokenCookie(res);
-  res.redirect("/login");
+	clearAuthTokenCookie(res);
+	res.redirect("/login");
 });
 
 // POST /subscribe
@@ -1054,7 +1169,7 @@ const { generateIcon } = require("../utils/iconGenerator");
 
 // Serve app icons for PWA
 router.get("/icon-:size.png", (req, res) => {
-	const size = parseInt(req.params.size);
+	const size = Number.parseInt(req.params.size);
 	const validSizes = [72, 96, 128, 144, 152, 180, 192, 384, 512];
 
 	if (!validSizes.includes(size)) {
@@ -1065,8 +1180,8 @@ router.get("/icon-:size.png", (req, res) => {
 
 	// For now, serve as SVG (browsers will handle it)
 	// In production, you might want to convert to PNG
-	res.setHeader('Content-Type', 'image/svg+xml');
-	res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+	res.setHeader("Content-Type", "image/svg+xml");
+	res.setHeader("Cache-Control", "public, max-age=31536000"); // Cache for 1 year
 	res.send(svg);
 });
 
@@ -1085,56 +1200,56 @@ router.get("/manifest.json", (_req, res) => {
 			{
 				src: "/icon-72.png",
 				sizes: "72x72",
-				type: "image/svg+xml"
+				type: "image/svg+xml",
 			},
 			{
 				src: "/icon-96.png",
 				sizes: "96x96",
-				type: "image/svg+xml"
+				type: "image/svg+xml",
 			},
 			{
 				src: "/icon-128.png",
 				sizes: "128x128",
-				type: "image/svg+xml"
+				type: "image/svg+xml",
 			},
 			{
 				src: "/icon-144.png",
 				sizes: "144x144",
-				type: "image/svg+xml"
+				type: "image/svg+xml",
 			},
 			{
 				src: "/icon-152.png",
 				sizes: "152x152",
-				type: "image/svg+xml"
+				type: "image/svg+xml",
 			},
 			{
 				src: "/icon-192.png",
 				sizes: "192x192",
 				type: "image/svg+xml",
-				purpose: "any maskable"
+				purpose: "any maskable",
 			},
 			{
 				src: "/icon-384.png",
 				sizes: "384x384",
-				type: "image/svg+xml"
+				type: "image/svg+xml",
 			},
 			{
 				src: "/icon-512.png",
 				sizes: "512x512",
 				type: "image/svg+xml",
-				purpose: "any maskable"
-			}
-		]
+				purpose: "any maskable",
+			},
+		],
 	};
 
-	res.setHeader('Content-Type', 'application/json');
-	res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+	res.setHeader("Content-Type", "application/json");
+	res.setHeader("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
 	res.json(manifest);
 });
 
 // Offline fallback page
 router.get("/offline", (req, res) => {
-	const user = req.user || { themePreference: 'auto', useClassicLayout: 0 };
+	const user = req.user || { themePreference: "auto", useClassicLayout: 0 };
 	res.render("offline", { user });
 });
 
@@ -1152,7 +1267,7 @@ function unescape_submission(response) {
 
 function unescape_selftext(post) {
 	// If called after getSubmissions
-	if (post.data && post.data.selftext_html) {
+	if (post.data?.selftext_html) {
 		post.data.selftext_html = he.decode(post.data.selftext_html);
 	}
 	// If called after getSubmissionComments
