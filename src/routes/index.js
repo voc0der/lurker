@@ -1,11 +1,15 @@
 const express = require("express");
 const he = require("he");
-const jwt = require("jsonwebtoken");
 const crypto = require('crypto');
 const geddit = require("../geddit.js");
-const { JWT_KEY } = require("../");
 const { db } = require("../db");
-const { authenticateToken, authenticateAdmin } = require("../auth");
+const {
+	authenticateToken,
+	authenticateAdmin,
+	clearAuthTokenCookie,
+	getAuthSession,
+	setAuthTokenCookie,
+} = require("../auth");
 const { validateInviteToken } = require("../invite");
 const logger = require("../logger");
 const oidc = require("../oidc");
@@ -120,17 +124,6 @@ function sanitizeThingId(value) {
 function generateRandomPassword(length = 12) {
   const bytes = crypto.randomBytes(length);
   return bytes.toString('base64').slice(0, length);  // Convert to base64 and slice to desired length
-}
-
-// Helper function to set the auth token cookie
-function setAuthTokenCookie(res, username, userId) {
-  const token = jwt.sign({ username, id: userId }, JWT_KEY, { expiresIn: "5d" });
-  res.cookie("auth_token", token, {
-    httpOnly: true,
-    secure: true,
-    maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days
-    sameSite: 'Strict',
-  });
 }
 
 // Middleware to check if user is logged in via HTTP headers
@@ -853,13 +846,41 @@ router.get("/auth/oidc/callback", async (req, res) => {
 
 // GET /login
 router.get("/login", async (req, res, next) => {
-  const token = req.cookies.auth_token;
-  if (token) {
-    return res.redirect("/");
-  }
-
   const redirectTo = getRequestedRedirect(req);
-  const bypassOidc = String(req.query.bypass_oidc || "").toLowerCase() === "true" || req.query.bypass_oidc === "1";
+  let bypassOidc = String(req.query.bypass_oidc || "").toLowerCase() === "true" || req.query.bypass_oidc === "1";
+  let message = req.query.message;
+
+  if (req.cookies?.auth_token) {
+    const session = getAuthSession(req);
+    if (session.status === "ok") {
+      return res.redirect("/");
+    }
+
+    if (session.status === "expired") {
+      clearAuthTokenCookie(res);
+      if (!message) {
+        message = "Session expired";
+      }
+    } else if (session.status === "invalid") {
+      logger.warn("Ignoring invalid auth token on /login", session.error);
+      clearAuthTokenCookie(res);
+    } else if (session.status === "missing_user") {
+      logger.debug("Clearing auth token for missing user on /login:", session.decoded?.username);
+      clearAuthTokenCookie(res);
+      if (!message) {
+        message = "User not found.";
+      }
+    } else if (session.status === "db_error") {
+      logger.error("Failed to validate auth token on /login:", session.error);
+      return res.render("login", {
+        message: message || "Database error.",
+        oidcEnabled: oidc.isOIDCEnabled(),
+        redirect: redirectTo,
+        bypassOidc: true,
+        ...commonRenderOptions,
+      });
+    }
+  }
 
   // Priority 1: OIDC
   if (oidc.isOIDCEnabled() && !bypassOidc) {
@@ -877,7 +898,7 @@ router.get("/login", async (req, res, next) => {
 
   // Priority 3: Manual login
   return res.render("login", {
-    message: req.query.message,
+    message,
     oidcEnabled: oidc.isOIDCEnabled(),
     redirect: redirectTo,
     bypassOidc,
@@ -912,7 +933,7 @@ router.post("/login", async (req, res) => {
 
 // GET /logout (clear JWT and log out user)
 router.get("/logout", (req, res) => {
-  res.clearCookie("auth_token", { httpOnly: true, secure: true });
+  clearAuthTokenCookie(res);
   res.redirect("/login");
 });
 

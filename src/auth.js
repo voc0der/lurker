@@ -4,6 +4,14 @@ const { JWT_KEY } = require("./");
 const logger = require("./logger");
 const oidc = require("./oidc");
 
+const AUTH_TOKEN_MAX_AGE_MS = 5 * 24 * 60 * 60 * 1000;
+const AUTH_TOKEN_COOKIE_OPTIONS = {
+	httpOnly: true,
+	secure: true,
+	sameSite: "Strict",
+	path: "/",
+};
+
 function normalizeIp(ip) {
 	if (!ip || typeof ip !== "string") return "";
 	if (ip.startsWith("::ffff:")) return ip.slice(7);
@@ -56,55 +64,105 @@ function logTokenError(message, error) {
 	logger.error(message, error);
 }
 
-// Middleware to authenticate using JWT token (from cookies)
-async function authenticateToken(req, res, next) {
-	const token = req.cookies && req.cookies.auth_token;
-	const remoteGroups = parseRemoteGroups(req);
-	const isAdminFromHeaders = remoteGroups.includes(process.env.ADMIN_GROUP || "admin") ? 1 : 0;
+function setAuthTokenCookie(res, username, userId) {
+	const token = jwt.sign({ username, id: userId }, JWT_KEY, { expiresIn: "5d" });
+	res.cookie("auth_token", token, {
+		...AUTH_TOKEN_COOKIE_OPTIONS,
+		maxAge: AUTH_TOKEN_MAX_AGE_MS,
+	});
+}
 
+function clearAuthTokenCookie(res) {
+	res.clearCookie("auth_token", AUTH_TOKEN_COOKIE_OPTIONS);
+}
+
+function getLoginRedirectPath(req, message) {
+	const params = new URLSearchParams({
+		redirect: req.originalUrl,
+	});
+	if (message) {
+		params.set("message", message);
+	}
+	return `/login?${params.toString()}`;
+}
+
+function getUserFromDecodedToken(decoded) {
+	if (decoded?.id) {
+		return db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
+	}
+	return db.query("SELECT * FROM users WHERE username = $username").get({
+		username: decoded?.username,
+	});
+}
+
+function getAuthSession(req) {
+	const token = req.cookies && req.cookies.auth_token;
 	if (!token) {
-		logger.debug("No token found, redirecting to login.");
-		return res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
+		return { status: "missing" };
 	}
 
 	let decoded;
 	try {
-		logger.debug("Verifying token...");
 		decoded = jwt.verify(token, JWT_KEY);
-		logger.debug("Token verified for user:", decoded);
 	} catch (error) {
-		if (error.name === "TokenExpiredError") {
-			logger.debug("Token expired:", error);
-			return res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}&message=Session expired`);
-		}
-		logTokenError("Token verification failed:", error);
-		return res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
+		return {
+			status: error?.name === "TokenExpiredError" ? "expired" : "invalid",
+			error,
+		};
 	}
 
-	let dbUser;
 	try {
-		if (decoded?.id) {
-			dbUser = db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
-		} else {
-			dbUser = db.query("SELECT * FROM users WHERE username = $username").get({ username: decoded.username });
+		const dbUser = getUserFromDecodedToken(decoded);
+		if (!dbUser) {
+			return { status: "missing_user", decoded };
 		}
+		return { status: "ok", decoded, dbUser };
+	} catch (error) {
+		return { status: "db_error", error };
+	}
+}
 
-		logger.debug("authenticateToken - loaded user from DB:", {
-			id: dbUser?.id,
-			username: dbUser?.username,
-			infiniteScroll: dbUser?.infiniteScroll,
-			useClassicLayout: dbUser?.useClassicLayout,
-			themePreference: dbUser?.themePreference,
-		});
-	} catch (err) {
-		logger.error("Database error:", err);
+// Middleware to authenticate using JWT token (from cookies)
+async function authenticateToken(req, res, next) {
+	const remoteGroups = parseRemoteGroups(req);
+	const isAdminFromHeaders = remoteGroups.includes(process.env.ADMIN_GROUP || "admin") ? 1 : 0;
+
+	if (!req.cookies?.auth_token) {
+		logger.debug("No token found, redirecting to login.");
+		return res.redirect(getLoginRedirectPath(req));
+	}
+
+	logger.debug("Verifying token...");
+	const session = getAuthSession(req);
+	if (session.status === "expired") {
+		logger.debug("Token expired:", session.error);
+		clearAuthTokenCookie(res);
+		return res.redirect(getLoginRedirectPath(req, "Session expired"));
+	}
+	if (session.status === "invalid") {
+		logTokenError("Token verification failed:", session.error);
+		clearAuthTokenCookie(res);
+		return res.redirect(getLoginRedirectPath(req));
+	}
+	if (session.status === "db_error") {
+		logger.error("Database error:", session.error);
 		return res.redirect("/login?message=Database error.");
 	}
-
-	if (!dbUser) {
-		logger.debug("User not found in database for token:", decoded?.username);
-		return res.redirect("/login?message=User not found.");
+	if (session.status === "missing_user") {
+		logger.debug("User not found in database for token:", session.decoded?.username);
+		clearAuthTokenCookie(res);
+		return res.redirect(getLoginRedirectPath(req, "User not found."));
 	}
+	const decoded = session.decoded;
+	const dbUser = session.dbUser;
+	logger.debug("Token verified for user:", decoded);
+	logger.debug("authenticateToken - loaded user from DB:", {
+		id: dbUser?.id,
+		username: dbUser?.username,
+		infiniteScroll: dbUser?.infiniteScroll,
+		useClassicLayout: dbUser?.useClassicLayout,
+		themePreference: dbUser?.themePreference,
+	});
 
 	// If Remote Header SSO is enabled, keep isAdmin in sync with the header.
 	if (isRemoteHeaderLoginEnabled() && remoteGroups.length > 0) {
@@ -142,45 +200,38 @@ async function authenticateToken(req, res, next) {
 
 // Middleware to authenticate admin (checks if user has admin privileges)
 async function authenticateAdmin(req, res, next) {
-	const token = req.cookies && req.cookies.auth_token;
 	const remoteGroups = parseRemoteGroups(req);
 	const isAdminFromHeaders = remoteGroups.includes(process.env.ADMIN_GROUP || "admin") ? 1 : 0;
 
-	if (!token) {
+	if (!req.cookies?.auth_token) {
 		logger.debug("No token found, redirecting to login for admin.");
-		return res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
+		return res.redirect(getLoginRedirectPath(req));
 	}
 
-	let decoded;
-	try {
-		logger.debug("Verifying token for admin...");
-		decoded = jwt.verify(token, JWT_KEY);
-		logger.debug("Admin token verified for user:", decoded);
-	} catch (error) {
-		if (error.name === "TokenExpiredError") {
-			logger.debug("Admin token expired:", error);
-			return res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}&message=Session expired`);
-		}
-		logTokenError("Admin token verification failed:", error);
-		return res.redirect(`/login?redirect=${encodeURIComponent(req.originalUrl)}`);
+	logger.debug("Verifying token for admin...");
+	const session = getAuthSession(req);
+	if (session.status === "expired") {
+		logger.debug("Admin token expired:", session.error);
+		clearAuthTokenCookie(res);
+		return res.redirect(getLoginRedirectPath(req, "Session expired"));
 	}
-
-	let dbUser;
-	try {
-		if (decoded?.id) {
-			dbUser = db.query("SELECT * FROM users WHERE id = $id").get({ id: decoded.id });
-		} else {
-			dbUser = db.query("SELECT * FROM users WHERE username = $username").get({ username: decoded.username });
-		}
-	} catch (err) {
-		logger.error("Database error:", err);
+	if (session.status === "invalid") {
+		logTokenError("Admin token verification failed:", session.error);
+		clearAuthTokenCookie(res);
+		return res.redirect(getLoginRedirectPath(req));
+	}
+	if (session.status === "db_error") {
+		logger.error("Database error:", session.error);
 		return res.redirect("/login?message=Database error.");
 	}
-
-	if (!dbUser) {
-		logger.debug("Admin user not found in database for token:", decoded?.username);
-		return res.redirect("/login?message=Admin user not found.");
+	if (session.status === "missing_user") {
+		logger.debug("Admin user not found in database for token:", session.decoded?.username);
+		clearAuthTokenCookie(res);
+		return res.redirect(getLoginRedirectPath(req, "Admin user not found."));
 	}
+	const decoded = session.decoded;
+	const dbUser = session.dbUser;
+	logger.debug("Admin token verified for user:", decoded);
 
 	if (isRemoteHeaderLoginEnabled() && remoteGroups.length > 0) {
 		const groupsStr = groupsJson(remoteGroups);
@@ -216,4 +267,10 @@ async function authenticateAdmin(req, res, next) {
 	return res.status(403).send("Only admins can access this route.");
 }
 
-module.exports = { authenticateToken, authenticateAdmin };
+module.exports = {
+	authenticateToken,
+	authenticateAdmin,
+	clearAuthTokenCookie,
+	getAuthSession,
+	setAuthTokenCookie,
+};
