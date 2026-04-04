@@ -41,7 +41,7 @@
             cp -R ./node_modules/* $out/node_modules
             ls -la $out/node_modules
           '';
-          outputHash = "sha256-wCMsk/gR+U5fCHcRj7Mxvh9Lg6wZAtMn7CvjyCPar+g=";
+          outputHash = "sha256-IHLrUqSzU7v18U+qkm42tUrQMJIcX55vY4cjIeyEcFw=";
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
         };
@@ -75,22 +75,25 @@
         };
     };
 
-    devShell = forAllSystems (system: let
+    devShells = forAllSystems (system: let
       pkgs = nixpkgsFor."${system}";
     in
-      pkgs.mkShell {
-        nativeBuildInputs = [
-          pkgs.bun
-          pkgs.biome
-          pkgs.typescript-language-server
-        ];
+      {
+        default = pkgs.mkShell {
+          nativeBuildInputs = [
+            pkgs.bun
+            pkgs.biome
+            pkgs.typescript-language-server
+          ];
+        };
       });
 
-    packages = forAllSystems (system: {
-      inherit (nixpkgsFor."${system}") lurker node_modules;
+    packages = forAllSystems (system: let
+      pkgs = nixpkgsFor."${system}";
+    in {
+      inherit (pkgs) lurker node_modules;
+      default = pkgs.lurker;
     });
-
-    defaultPackage = forAllSystems (system: nixpkgsFor."${system}".lurker);
 
     apps = forAllSystems (system: let
       pkgs = nixpkgsFor.${system};
@@ -98,6 +101,9 @@
       default = {
         type = "app";
         program = "${pkgs.lurker}/bin/lurker";
+        meta = {
+          description = "Launch the Lurker app";
+        };
       };
     });
 
