@@ -950,39 +950,37 @@ router.get("/login", async (req, res, next) => {
 		req.query.bypass_oidc === "1";
 	let message = req.query.message;
 
-	if (req.cookies?.auth_token) {
-		const session = getAuthSession(req);
-		if (session.status === "ok") {
-			return res.redirect("/");
-		}
+	const session = getAuthSession(req);
+	if (session.status === "ok") {
+		return res.redirect("/");
+	}
 
-		if (session.status === "expired") {
-			clearAuthTokenCookie(res);
-			if (!message) {
-				message = "Session expired";
-			}
-		} else if (session.status === "invalid") {
-			logger.warn("Ignoring invalid auth token on /login", session.error);
-			clearAuthTokenCookie(res);
-		} else if (session.status === "missing_user") {
-			logger.debug(
-				"Clearing auth token for missing user on /login:",
-				session.decoded?.username,
-			);
-			clearAuthTokenCookie(res);
-			if (!message) {
-				message = "User not found.";
-			}
-		} else if (session.status === "db_error") {
-			logger.error("Failed to validate auth token on /login:", session.error);
-			return res.render("login", {
-				message: message || "Database error.",
-				oidcEnabled: oidc.isOIDCEnabled(),
-				redirect: redirectTo,
-				bypassOidc: true,
-				...commonRenderOptions,
-			});
+	if (session.status === "expired") {
+		clearAuthTokenCookie(res);
+		if (!message) {
+			message = "Session expired";
 		}
+	} else if (session.status === "invalid") {
+		logger.warn("Ignoring invalid auth token on /login", session.error);
+		clearAuthTokenCookie(res);
+	} else if (session.status === "missing_user") {
+		logger.debug(
+			"Clearing auth token for missing user on /login:",
+			session.decoded?.username,
+		);
+		clearAuthTokenCookie(res);
+		if (!message) {
+			message = "User not found.";
+		}
+	} else if (session.status === "db_error") {
+		logger.error("Failed to validate auth token on /login:", session.error);
+		return res.render("login", {
+			message: message || "Database error.",
+			oidcEnabled: oidc.isOIDCEnabled(),
+			redirect: redirectTo,
+			bypassOidc: true,
+			...commonRenderOptions,
+		});
 	}
 
 	// Priority 1: OIDC
