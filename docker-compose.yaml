@@ -24,6 +24,7 @@ services:
       LURKER_THEME: ""           # optional; name of a CSS file in src/public without ".css" (default: unset)
 
       # --- Authentication & security ---
+      LURKER_DISABLE_SSL: "false"  # default: "false". Set to "true" to disable the Secure cookie flag (needed for HTTP-only deployments)
       JWT_SECRET_KEY: ""         # auto-generated if unset; set to keep sessions valid across restarts
       REMOTE_HEADER_LOGIN: ""    # default: "false". Set to "true" to enable Remote Header SSO
       ADMIN_GROUP: "admin"       # default: admin (used when REMOTE_HEADER_LOGIN is enabled)

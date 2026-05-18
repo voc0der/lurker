@@ -1006,50 +1006,34 @@ body[data-classic-layout="1"] .domain {
   }
 }
 
-/* Mobile: Stack images below title for better readability */
+/* Mobile: Keep compact row layout with thumbnails */
 @media (max-width: 767px) {
   .post-container.compact {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .post-info {
-    flex-direction: column !important;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
   }
 
   .media-preview {
-    order: 1 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    margin-left: 0 !important;
-    margin-top: 10px;
-    width: 100%;
-  }
-
-  .media-preview img,
-  .media-preview video {
-    width: 100%;
-    height: auto;
-    max-height: 300px;
-    object-fit: cover;
+    order: -1 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    flex-shrink: 0;
+    width: auto;
   }
 
   .post-text {
     width: 100%;
   }
 
-  /* Disable classic layout on mobile */
   body[data-classic-layout="1"] .post-container.compact {
-    flex-direction: column;
     padding: 0.3rem;
-  }
-
-  body[data-classic-layout="1"] .media-preview img,
-  body[data-classic-layout="1"] .media-preview video {
-    width: 100%;
-    height: auto;
-    max-height: 300px;
   }
 }
 
