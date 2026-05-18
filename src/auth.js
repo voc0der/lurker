@@ -7,7 +7,7 @@ const oidc = require("./oidc");
 const AUTH_TOKEN_MAX_AGE_MS = 5 * 24 * 60 * 60 * 1000;
 const AUTH_TOKEN_COOKIE_OPTIONS = {
 	httpOnly: true,
-	secure: true,
+	secure: process.env.LURKER_DISABLE_SSL !== "true",
 	sameSite: "Strict",
 	path: "/",
 };
