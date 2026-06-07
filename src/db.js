@@ -120,6 +120,13 @@ runMigration("add-show-nsfw-thumbnails-column", () => {
   `).run();
 });
 
+runMigration("add-reddit-auth-headers-column", () => {
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN redditAuthHeaders TEXT
+  `).run();
+});
+
 runMigration("add-oidc-support", () => {
 	// Core OIDC fields
 	db.query(`

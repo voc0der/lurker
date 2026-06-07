@@ -46,6 +46,26 @@ html
               option(value="dark" selected=(user.themePreference === 'dark')) Dark
               option(value="res" selected=(user.themePreference === 'res')) RES Night Mode
 
+          fieldset.dashboard-fieldset
+            legend reddit authentication
+            p.dashboard-help
+              | Current: #{redditAuthStatus.description}
+
+            label(for="reddit-auth-type") Credential Type
+            select(id="reddit-auth-type" name="redditAuthType")
+              option(value="auto" selected) Auto-detect
+              option(value="cookie") Cookie header
+              option(value="reddit_session") reddit_session cookie
+              option(value="bearer") Bearer token
+
+            label(for="reddit-auth-credential") Reddit Credential
+            textarea#reddit-auth-credential.dashboard-textarea(name="redditAuthCredential" rows="6" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Cookie: reddit_session=...; token_v2=...\nAuthorization: Bearer ...")
+
+            if redditAuthStatus.configured
+              label(for="clear-reddit-auth")
+                input(type="checkbox" id="clear-reddit-auth" name="clearRedditAuth" value="1")
+                | &nbsp;Clear saved Reddit credential
+
           button(type="submit" style="margin-top: 20px;") Save Preferences
 
         if isAdmin

@@ -822,6 +822,42 @@ form input[type="submit"]:hover {
   flex-flow: row wrap;
 }
 
+.dashboard-fieldset {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 20px;
+  padding: 12px;
+  border: 1px solid var(--bg-color-muted);
+  border-radius: 4px;
+}
+
+.dashboard-fieldset legend {
+  padding: 0 4px;
+}
+
+.dashboard-fieldset select {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  box-sizing: border-box;
+  border: 1px solid var(--bg-color-muted);
+  border-radius: 4px;
+  background-color: var(--bg-color-muted);
+  color: var(--text-color);
+}
+
+.dashboard-help {
+  width: 100%;
+  margin: 5px 0 10px;
+  color: var(--text-color-muted);
+}
+
+.dashboard-textarea {
+  min-height: 8rem;
+  resize: vertical;
+  font-family: monospace;
+}
+
 .invite-table {
   width: 100%;
   padding: 10px 0;
