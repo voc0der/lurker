@@ -136,6 +136,7 @@ each user can customize their experience via the dashboard:
 - **Classic RES-style Layout**: toggle compact desktop layout (thumbnails on left)
 - **High Resolution Thumbnails**: use RES-quality preview images (640x640+) instead of low-res thumbnails (70x70), can be disabled for low bandwidth connections
 - **Theme Preference**: choose between auto (system), light, dark, or RES night mode
+- **Reddit Authentication**: optionally send a per-user Reddit bearer token or cookie header with Reddit JSON requests
 
 **PWA installation**
 
@@ -205,6 +206,7 @@ nix build .#lurker  # build the thing
 - [x] support crossposts
 - [x] PWA support (manifest, icons, meta tags)
 - [x] user preferences system (infinite scroll, themes, layout)
+- [x] per-user Reddit auth header support
 - [x] "Never Ending Reddit" infinite scroll
 - [x] Classic RES-style layout
 - [x] multiple theme support (auto/light/dark/RES)

@@ -13,6 +13,12 @@ const {
 const { validateInviteToken } = require("../invite");
 const logger = require("../logger");
 const oidc = require("../oidc");
+const {
+	getRedditAuthHeaders,
+	getRedditAuthStatus,
+	normalizeRedditAuthInput,
+	serializeRedditAuthHeaders,
+} = require("../redditAuth");
 
 const router = express.Router();
 const G = new geddit.Geddit();
@@ -221,6 +227,19 @@ const commonRenderOptions = {
 	theme: process.env.LURKER_THEME,
 };
 
+function getRedditRequestOptions(req) {
+	try {
+		const authHeaders = getRedditAuthHeaders(req.user?.redditAuthHeaders);
+		return authHeaders ? { authHeaders } : {};
+	} catch (err) {
+		logger.warn("Ignoring invalid stored Reddit credential", {
+			userId: req.user?.id,
+			error: err?.message || String(err),
+		});
+		return {};
+	}
+}
+
 // GET /
 router.get("/", authenticateToken, async (req, res) => {
 	const subs = db
@@ -246,8 +265,14 @@ router.get("/", authenticateToken, async (req, res) => {
 	const isMulti = true;
 	const isHomePage = true; // Flag to indicate this is the home page
 
-	const postsReq = G.getSubmissions(query.sort, subreddit, query);
-	const aboutReq = G.getSubreddit(subreddit);
+	const redditRequestOptions = getRedditRequestOptions(req);
+	const postsReq = G.getSubmissions(
+		query.sort,
+		subreddit,
+		query,
+		redditRequestOptions,
+	);
+	const aboutReq = G.getSubreddit(subreddit, redditRequestOptions);
 	const [posts, about] = await Promise.all([postsReq, aboutReq]);
 
 	if (query.view === "card" && posts && posts.posts) {
@@ -293,8 +318,14 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
 				.get({ id: req.user.id, subreddit }) !== null;
 	}
 
-	const postsReq = G.getSubmissions(query.sort, subreddit, query);
-	const aboutReq = G.getSubreddit(subreddit);
+	const redditRequestOptions = getRedditRequestOptions(req);
+	const postsReq = G.getSubmissions(
+		query.sort,
+		subreddit,
+		query,
+		redditRequestOptions,
+	);
+	const aboutReq = G.getSubreddit(subreddit, redditRequestOptions);
 	const [posts, about] = await Promise.all([postsReq, aboutReq]);
 
 	if (query.view === "card" && posts && posts.posts) {
@@ -341,7 +372,12 @@ router.get("/api/r/:subreddit/posts", authenticateToken, async (req, res) => {
 		}
 	}
 
-	const posts = await G.getSubmissions(query.sort, subreddit, query);
+	const posts = await G.getSubmissions(
+		query.sort,
+		subreddit,
+		query,
+		getRedditRequestOptions(req),
+	);
 
 	if (query.view === "card" && posts && posts.posts) {
 		posts.posts.forEach(unescape_selftext);
@@ -382,7 +418,11 @@ router.get("/comments/:id", authenticateToken, async (req, res) => {
 	const params = {
 		limit: 50,
 	};
-	const response = await G.getSubmissionComments(id, params);
+	const response = await G.getSubmissionComments(
+		id,
+		params,
+		getRedditRequestOptions(req),
+	);
 	res.render("comments", {
 		data: unescape_submission(response),
 		user: req.user,
@@ -410,6 +450,7 @@ router.get(
 			parent_id,
 			child_id,
 			params,
+			getRedditRequestOptions(req),
 		);
 		const comments = response.comments;
 		comments.forEach(unescape_comment);
@@ -452,7 +493,11 @@ router.get("/sub-search", authenticateToken, async (req, res) => {
 	if (!req.query || !req.query.q) {
 		res.render("sub-search", { user: req.user, ...commonRenderOptions });
 	} else {
-		const { items, after } = await G.searchSubreddits(req.query.q);
+		const { items, after } = await G.searchSubreddits(
+			req.query.q,
+			{},
+			getRedditRequestOptions(req),
+		);
 		const subs = db
 			.query("SELECT subreddit FROM subscriptions WHERE user_id = $id")
 			.all({ id: req.user.id })
@@ -479,7 +524,11 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 	if (!req.query || !req.query.q) {
 		res.render("post-search", { user: req.user, ...commonRenderOptions });
 	} else {
-		const { items, after } = await G.searchSubmissions(req.query.q);
+		const { items, after } = await G.searchSubmissions(
+			req.query.q,
+			{},
+			getRedditRequestOptions(req),
+		);
 		const message =
 			items.length === 0
 				? "no results found"
@@ -504,7 +553,11 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 
 // GET /dashboard
 router.get("/dashboard", authenticateToken, async (req, res) => {
-	logger.debug("Dashboard - req.user from authenticateToken:", req.user);
+	logger.debug("Dashboard - req.user from authenticateToken:", {
+		id: req.user.id,
+		username: req.user.username,
+		isAdmin: req.user.isAdmin,
+	});
 
 	let invites = null;
 	const isAdmin = db
@@ -531,10 +584,21 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 		showNsfwThumbnails: req.user.showNsfwThumbnails,
 	});
 
+	let redditAuthStatus = { configured: false, description: "not configured" };
+	try {
+		redditAuthStatus = getRedditAuthStatus(req.user.redditAuthHeaders);
+	} catch (err) {
+		logger.warn("Failed to read stored Reddit credential status", {
+			userId: req.user.id,
+			error: err?.message || String(err),
+		});
+	}
+
 	res.render("dashboard", {
 		invites,
 		isAdmin,
 		user: req.user,
+		redditAuthStatus,
 		message: req.query.message,
 		query: req.query,
 		...commonRenderOptions,
@@ -549,12 +613,35 @@ router.post("/update-preferences", authenticateToken, async (req, res) => {
 		themePreference,
 		highResThumbnails,
 		showNsfwThumbnails,
+		redditAuthCredential,
+		redditAuthType,
+		clearRedditAuth,
 	} = req.body;
 	const infiniteScrollValue = infiniteScroll === "1" ? 1 : 0;
 	const useClassicLayoutValue = useClassicLayout === "1" ? 1 : 0;
 	const highResThumbnailsValue = highResThumbnails === "1" ? 1 : 0;
 	const showNsfwThumbnailsValue = showNsfwThumbnails === "1" ? 1 : 0;
 	const themeValue = themePreference || "auto";
+	const hasRedditAuthCredentialInput =
+		typeof redditAuthCredential === "string" &&
+		redditAuthCredential.trim().length > 0;
+	let redditAuthHeadersUpdate;
+
+	try {
+		if (clearRedditAuth === "1") {
+			redditAuthHeadersUpdate = null;
+		} else if (hasRedditAuthCredentialInput) {
+			redditAuthHeadersUpdate = serializeRedditAuthHeaders(
+				normalizeRedditAuthInput(redditAuthCredential, redditAuthType),
+			);
+		}
+	} catch (err) {
+		logger.warn("Rejected invalid Reddit credential input", {
+			userId: req.user.id,
+			error: err?.message || String(err),
+		});
+		return res.redirect("/dashboard?message=Invalid Reddit credential");
+	}
 
 	logger.debug("Received preferences:", {
 		infiniteScroll,
@@ -562,6 +649,8 @@ router.post("/update-preferences", authenticateToken, async (req, res) => {
 		themePreference,
 		highResThumbnails,
 		showNsfwThumbnails,
+		hasRedditAuthCredentialInput,
+		clearRedditAuth: clearRedditAuth === "1",
 		computed: {
 			infiniteScrollValue,
 			useClassicLayoutValue,
@@ -573,28 +662,45 @@ router.post("/update-preferences", authenticateToken, async (req, res) => {
 	});
 
 	try {
+		const redditAuthSql =
+			redditAuthHeadersUpdate !== undefined
+				? ", redditAuthHeaders = $redditAuthHeaders"
+				: "";
+		const updateParams = {
+			infiniteScroll: infiniteScrollValue,
+			useClassicLayout: useClassicLayoutValue,
+			themePreference: themeValue,
+			highResThumbnails: highResThumbnailsValue,
+			showNsfwThumbnails: showNsfwThumbnailsValue,
+			id: req.user.id,
+		};
+
+		if (redditAuthHeadersUpdate !== undefined) {
+			updateParams.redditAuthHeaders = redditAuthHeadersUpdate;
+		}
+
 		const result = db
 			.query(
-				"UPDATE users SET infiniteScroll = $infiniteScroll, useClassicLayout = $useClassicLayout, themePreference = $themePreference, highResThumbnails = $highResThumbnails, showNsfwThumbnails = $showNsfwThumbnails WHERE id = $id",
+				`UPDATE users SET infiniteScroll = $infiniteScroll, useClassicLayout = $useClassicLayout, themePreference = $themePreference, highResThumbnails = $highResThumbnails, showNsfwThumbnails = $showNsfwThumbnails${redditAuthSql} WHERE id = $id`,
 			)
-			.run({
-				infiniteScroll: infiniteScrollValue,
-				useClassicLayout: useClassicLayoutValue,
-				themePreference: themeValue,
-				highResThumbnails: highResThumbnailsValue,
-				showNsfwThumbnails: showNsfwThumbnailsValue,
-				id: req.user.id,
-			});
+			.run(updateParams);
 
 		logger.debug("Update result:", result);
 
 		// Verify the update
 		const updatedUser = db
 			.query(
-				"SELECT infiniteScroll, useClassicLayout, themePreference, highResThumbnails, showNsfwThumbnails FROM users WHERE id = $id",
+				"SELECT infiniteScroll, useClassicLayout, themePreference, highResThumbnails, showNsfwThumbnails, redditAuthHeaders FROM users WHERE id = $id",
 			)
 			.get({ id: req.user.id });
-		logger.debug("User after update:", updatedUser);
+		logger.debug("User after update:", {
+			infiniteScroll: updatedUser?.infiniteScroll,
+			useClassicLayout: updatedUser?.useClassicLayout,
+			themePreference: updatedUser?.themePreference,
+			highResThumbnails: updatedUser?.highResThumbnails,
+			showNsfwThumbnails: updatedUser?.showNsfwThumbnails,
+			redditAuthConfigured: Boolean(updatedUser?.redditAuthHeaders),
+		});
 
 		return res.redirect("/dashboard");
 	} catch (err) {
