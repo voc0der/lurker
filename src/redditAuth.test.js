@@ -44,6 +44,26 @@ describe("normalizeRedditAuthInput", () => {
 		});
 	});
 
+	test("normalizes full cookie headers with hard line breaks", () => {
+		expect(
+			normalizeRedditAuthInput(
+				"Cookie: loid=abc\nZ0FB; csv=2; reddit_session=def",
+				"auto",
+			),
+		).toEqual({
+			cookie: "loid=abcZ0FB; csv=2; reddit_session=def",
+		});
+
+		expect(
+			normalizeRedditAuthInput(
+				"loid=abc\nZ0FB; csv=2; reddit_session=def",
+				"cookie",
+			),
+		).toEqual({
+			cookie: "loid=abcZ0FB; csv=2; reddit_session=def",
+		});
+	});
+
 	test("supports a bare reddit_session value when selected", () => {
 		expect(normalizeRedditAuthInput("abc.def", "reddit_session")).toEqual({
 			cookie: "reddit_session=abc.def",
@@ -78,5 +98,18 @@ describe("normalizeRedditAuthInput", () => {
 			Authorization: "Bearer abc123",
 			Cookie: "reddit_session=abc",
 		});
+	});
+
+	test("does not pass invalid stored cookie headers to fetch", async () => {
+		const { Geddit } = await import("./geddit.js");
+		const reddit = new Geddit();
+		const headers = reddit.getRequestHeaders({
+			authHeaders: {
+				cookie: "reddit_session=abc\nloid=def",
+			},
+		});
+
+		expect(headers.Cookie).toBeUndefined();
+		expect(() => new Headers(headers)).not.toThrow();
 	});
 });
