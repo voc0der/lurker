@@ -58,6 +58,10 @@ class Geddit {
 		return url;
 	}
 
+	isSafeHeaderValue(value) {
+		return typeof value === "string" && !/[\0-\x1F\x7F]/.test(value);
+	}
+
 	getRequestHeaders(requestOptions = {}) {
 		const headers = { ...this.headers };
 		const authHeaders = requestOptions?.authHeaders || {};
@@ -65,10 +69,10 @@ class Geddit {
 			authHeaders.authorization || authHeaders.Authorization;
 		const cookie = authHeaders.cookie || authHeaders.Cookie;
 
-		if (authorization) {
+		if (this.isSafeHeaderValue(authorization)) {
 			headers.Authorization = authorization;
 		}
-		if (cookie) {
+		if (this.isSafeHeaderValue(cookie)) {
 			headers.Cookie = cookie;
 		}
 

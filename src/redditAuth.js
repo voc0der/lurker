@@ -105,6 +105,16 @@ function addCookieHeader(value, cookiePairs) {
 	return added;
 }
 
+function collapseCookieHeaderInput(value) {
+	let raw = String(value || "").trim();
+	const headerMatch = raw.match(/^Cookie\s*:\s*([\s\S]+)$/i);
+	if (headerMatch) {
+		raw = headerMatch[1].trim();
+	}
+
+	return raw.replace(/[\r\n]+[ \t]*/g, "");
+}
+
 function addCookieLine(line, cookiePairs) {
 	const trimmed = String(line || "").trim();
 	if (!trimmed) return false;
@@ -130,8 +140,15 @@ function cookieHeaderFromPairs(cookiePairs) {
 function normalizeCookieInput(input) {
 	const cookiePairs = new Map();
 	const raw = String(input || "").trim();
-	for (const line of raw.split(/\r?\n/)) {
-		addCookieLine(line, cookiePairs);
+	const multilineCookieHeader =
+		/[\r\n]/.test(raw) && (/^Cookie\s*:/i.test(raw) || raw.includes(";"));
+
+	if (multilineCookieHeader) {
+		addCookieHeader(collapseCookieHeaderInput(raw), cookiePairs);
+	} else {
+		for (const line of raw.split(/\r?\n/)) {
+			addCookieLine(line, cookiePairs);
+		}
 	}
 
 	const cookie = cookieHeaderFromPairs(cookiePairs);
@@ -169,6 +186,10 @@ function normalizeRedditAuthInput(input, type = "auto") {
 			throw new Error("Reddit session cookie value is invalid");
 		}
 		return { cookie: parsed.header };
+	}
+
+	if (/[\r\n]/.test(raw) && (/^Cookie\s*:/i.test(raw) || raw.includes(";"))) {
+		return { cookie: normalizeCookieInput(raw) };
 	}
 
 	const headers = {};
