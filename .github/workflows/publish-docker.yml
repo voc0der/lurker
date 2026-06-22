@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Ensure line endings aren't modified during checkout
           autocrlf: false
