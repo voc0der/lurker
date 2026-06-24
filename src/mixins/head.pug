@@ -41,3 +41,22 @@ mixin head(title)
     link(rel="preconnect" href="https://rsms.me/")
     link(rel="stylesheet" href="https://rsms.me/inter/inter.css")
     script(src="https://cdn.dashjs.org/latest/dash.all.min.js")
+    script.
+      //- Reddit serves hosted-video audio as a separate stream; the plain
+      //- fallback_url mp4 is video-only. Use the HLS manifest natively
+      //- where supported (Safari/iOS), otherwise hand the DASH manifest
+      //- to dash.js so the audio track actually plays. Deferred until the
+      //- caller decides it's needed (e.g. on first play) so feeds full of
+      //- video posts don't all fetch manifests/segments on mobile data.
+      function initVideoPlayer(video, resume) {
+        if (!video || video.dataset.playerInitialized) return;
+        video.dataset.playerInitialized = "1";
+        var hlsUrl = video.dataset.hlsUrl;
+        var dashUrl = video.dataset.dashUrl;
+        if (hlsUrl && video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = hlsUrl;
+          if (resume) video.play();
+        } else if (dashUrl && window.dashjs) {
+          dashjs.MediaPlayer().create().initialize(video, dashUrl, !!resume);
+        }
+      }

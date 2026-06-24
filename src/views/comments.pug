@@ -62,9 +62,11 @@ html
               img(src=postMedia.url).post-media
           else if isPostVideo(post)
             - var decodedVideos = decodePostVideoUrls(postMedia)
-            - var videoSrc = decodedVideos[2] || decodedVideos[1]
-            - var needsDash = !decodedVideos[2] && !!decodedVideos[1]
-            video(controls data-dashjs-player=needsDash ? "" : null src=videoSrc).post-media
+            - var videoSrc = decodedVideos[2] || decodedVideos[1] || decodedVideos[0]
+            video(controls onplay=`initVideoPlayer(this, true)` src=videoSrc data-hls-url=decodedVideos[0] data-dash-url=decodedVideos[1] poster=decodedVideos[4]).post-media
+            if !decodedVideos[2] && (decodedVideos[0] || decodedVideos[1])
+              script.
+                initVideoPlayer(document.currentScript.previousElementSibling);
           else if isPostLink(post)
             a(href=post.url)
               | #{post.url}
