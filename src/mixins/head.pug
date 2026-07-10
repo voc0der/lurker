@@ -40,7 +40,7 @@ mixin head(title)
       link(rel="stylesheet", href=`/${theme}.css`)
     link(rel="preconnect" href="https://rsms.me/")
     link(rel="stylesheet" href="https://rsms.me/inter/inter.css")
-    script(src="https://cdn.dashjs.org/latest/dash.all.min.js")
+    script(src="/vendor/dash.all.min.js" defer)
     script.
       //- Reddit serves hosted-video audio as a separate stream; the plain
       //- fallback_url mp4 is video-only. Use the HLS manifest natively

@@ -14,12 +14,13 @@
 	},
 	"dependencies": {
 		"cookie-parser": "^1.4.7",
+		"dashjs": "^5.2.0",
 		"express": "^5.2.1",
 		"express-rate-limit": "^8.2.1",
 		"he": "^1.2.0",
 		"jsonwebtoken": "^9.0.2",
+		"openid-client": "^6.0.0",
 		"pug": "^3.0.3",
-		"timeago.js": "^4.0.2",
-		"openid-client": "^6.0.0"
+		"timeago.js": "^4.0.2"
 	}
 }
