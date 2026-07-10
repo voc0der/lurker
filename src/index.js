@@ -125,11 +125,10 @@ async function bootstrap() {
 	app.use(express.static(path.join(__dirname, "assets")));
 	// Serve dash.js from our own origin; privacy browsers (Brave, Vanadium)
 	// block third-party CDN scripts, which broke hosted-video playback (#24).
-	app.get("/vendor/dash.all.min.js", (_req, res) => {
-		res.sendFile(
-			path.join(__dirname, "..", "node_modules", "dashjs", "dist", "modern", "umd", "dash.all.min.js"),
-		);
-	});
+	app.use(
+		"/vendor",
+		express.static(path.join(__dirname, "..", "node_modules", "dashjs", "dist", "modern", "umd")),
+	);
 	app.use((req, _res, next) => {
 		req.cookies = parseCookies(req.headers.cookie);
 		next();
