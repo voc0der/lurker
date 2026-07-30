@@ -19,7 +19,7 @@
   in {
     overlays.default = final: prev: let
       pname = "lurker";
-      version = "0.2.0";
+      version = "0.2.1";
     in {
       node_modules = with final;
         stdenv.mkDerivation {
