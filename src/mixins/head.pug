@@ -8,7 +8,8 @@ mixin head(title)
 
     //- PWA Support
     link(rel="manifest" href="/manifest.json")
-    meta(name="theme-color" content="#29BC9B")
+    meta(name="theme-color" content="#0b1416")
+    meta(name="color-scheme" content="light dark")
     meta(name="mobile-web-app-capable" content="yes")
     meta(name="application-name" content="Lurker")
 
@@ -42,21 +43,60 @@ mixin head(title)
     link(rel="stylesheet" href="https://rsms.me/inter/inter.css")
     script(src="/vendor/dash.all.min.js" defer)
     script.
-      //- Reddit serves hosted-video audio as a separate stream; the plain
-      //- fallback_url mp4 is video-only. Use the HLS manifest natively
-      //- where supported (Safari/iOS), otherwise hand the DASH manifest
-      //- to dash.js so the audio track actually plays. Deferred until the
-      //- caller decides it's needed (e.g. on first play) so feeds full of
-      //- video posts don't all fetch manifests/segments on mobile data.
-      function initVideoPlayer(video, resume) {
+      //- Reddit serves hosted-video audio separately from the fallback
+      //- MP4. Prepare HLS/DASH before playback so Android does not swap
+      //- sources while entering its native fullscreen player. If mobile
+      //- playback starts without that preparation, keep the known-good
+      //- MP4 instead. DASH errors also fall back to the MP4.
+      function isMobileVideoContext() {
+        return window.matchMedia('(pointer: coarse)').matches
+          || window.matchMedia('(max-width: 767px)').matches;
+      }
+
+      function initVideoPlayer(video, resume, prepareMobileDash) {
         if (!video || video.dataset.playerInitialized) return;
-        video.dataset.playerInitialized = "1";
         var hlsUrl = video.dataset.hlsUrl;
         var dashUrl = video.dataset.dashUrl;
+        var fallbackUrl = video.dataset.fallbackUrl;
+        var mobileContext = isMobileVideoContext();
         if (hlsUrl && video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.dataset.playerInitialized = "1";
           video.src = hlsUrl;
-          if (resume) video.play();
-        } else if (dashUrl && window.dashjs) {
-          dashjs.MediaPlayer().create().initialize(video, dashUrl, !!resume);
+          video.load();
+          if (resume) {
+            var playPromise = video.play();
+            if (playPromise) playPromise.catch(function () {});
+          }
+        } else if (dashUrl && window.dashjs && (!mobileContext || prepareMobileDash || !fallbackUrl)) {
+          video.dataset.playerInitialized = "1";
+          var player = dashjs.MediaPlayer().create();
+          var fallbackActivated = false;
+          var activateFallback = function () {
+            if (!fallbackUrl || fallbackActivated) return;
+            fallbackActivated = true;
+            var shouldResume = resume || !video.paused;
+            if (player.destroy) player.destroy();
+            video.dataset.playerInitialized = "fallback";
+            video.src = fallbackUrl;
+            video.load();
+            if (shouldResume) {
+              var fallbackPlay = video.play();
+              if (fallbackPlay) fallbackPlay.catch(function () {});
+            }
+          };
+          if (fallbackUrl && dashjs.MediaPlayer.events && dashjs.MediaPlayer.events.ERROR) {
+            player.on(dashjs.MediaPlayer.events.ERROR, function () {
+              if (fallbackActivated) return;
+              activateFallback();
+            });
+          }
+          try {
+            player.initialize(video, dashUrl, !!resume);
+          } catch (_error) {
+            activateFallback();
+          }
+        } else if (mobileContext && fallbackUrl && (!prepareMobileDash || !dashUrl)) {
+          //- This path intentionally does not change video.src.
+          video.dataset.playerInitialized = "1";
         }
       }

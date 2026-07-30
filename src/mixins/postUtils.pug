@@ -63,6 +63,15 @@
     return (p.post_hint == "link");
   }
 -
+  function hasPostThumbnail(p) {
+    p = getPostData(p);
+    return Boolean(
+      p.thumbnail
+      && !["self", "default", "image", "spoiler", "nsfw"].includes(p.thumbnail)
+      && /^https?:\/\//i.test(p.thumbnail)
+    );
+  }
+-
   function imgExt(p, id) {
     p = getPostData(p);
     var metadata = p.media_metadata;

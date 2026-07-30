@@ -9,26 +9,17 @@ mixin post(p, currentUrl)
     div.post-container(class=`${query.view} ${p.stickied?"sticky":""}`)
       div.post-info
         div.post-text(class=`${query.view}`)
-          div.title-container(class=`${query.view}`)
-            a(class=`${query.view}`, href=`/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}`)
-              != p.title
-            span.domain   (#{p.domain})
-          div.info-container 
+          div.info-container.post-meta
             p
-              | #{fmtnum(p.ups)} ↑ 
-              if p.gilded > 0
-                | &nbsp;·&nbsp;
-                span.gilded
-                  | #{p.gilded} ☆
-              span.post-author
-                | &nbsp;·&nbsp;
-                | u/#{p.author} 
+              span.post-author u/#{p.author}
               | &nbsp;·&nbsp;
               | #{timeDifference(Date.now(), p.created * 1000)}
               | &nbsp;·&nbsp;
               a(href=`/r/${p.subreddit}?view=${viewQuery}`) r/#{p.subreddit}
-              | &nbsp;·&nbsp;
-              a(href=`/comments/${p.id}?from=${from}`) #{fmtnum (p.num_comments)} ↩
+          div.title-container(class=`${query.view}`)
+            a(class=`${query.view}`, href=`/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}`)
+              != p.title
+            span.domain #{p.domain}
           if (query.view == "card" && !isPostMedia(p) && p.selftext_html)
             div.self-text-overflow.card
               if p.spoiler || p.over_18
@@ -37,24 +28,43 @@ mixin post(p, currentUrl)
                     != p.over_18 ? 'nsfw' : 'spoiler'
               div.self-text.card
                 != convertInlineImageLinks(p.selftext_html)
+          div.post-actions
+            span.action-chip.vote-score(aria-label=`${fmtnum(p.ups)} votes`)
+              span.action-icon(aria-hidden="true") ↑
+              strong #{fmtnum(p.ups)}
+            a.action-chip(href=`/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}` aria-label=`${fmtnum(p.num_comments)} comments`)
+              span.action-icon(aria-hidden="true") ↩
+              span #{fmtnum(p.num_comments)}
+            if p.gilded > 0
+              span.action-chip.gilded(aria-label=`${p.gilded} awards`)
+                | #{p.gilded} ☆
+            if isPostLink(p)
+              a.action-chip.external-action(href=p.url aria-label=`Open ${p.domain}`)
+                span(aria-hidden="true") ↗
         if query.view != "card"
           div.media-preview
             - var onclick = `toggleDetails('${p.id}')`
+            - var onkeydown = `if(event.key === 'Enter' || event.key === ' '){event.preventDefault();toggleDetails('${p.id}')}`
             if isPostGallery(p)
               - var item = (p.over_18 && !showNsfwThumbnails ? `/nsfw.svg` : p.spoiler ? `/spoiler.svg` : postGalleryItems(p)[0].url)
-              img(src=item onclick=onclick) 
+              img(src=item onclick=onclick onkeydown=onkeydown tabindex="0" role="button" aria-label="Expand gallery")
             else if isPostImage(p)
               - var useHighRes = !user || user.highResThumbnails === undefined || user.highResThumbnails === 1
               - var url = postThumbnail(p, useHighRes, showNsfwThumbnails)
-              img(src=url onclick=onclick)
+              img(src=url onclick=onclick onkeydown=onkeydown tabindex="0" role="button" aria-label="Expand image")
             else if isPostVideo(p)
               - var useHighRes = !user || user.highResThumbnails === undefined || user.highResThumbnails === 1
               - var decodedVideos = decodePostVideoUrls(p)
-              - var videoSrc = useHighRes ? decodedVideos[2] : decodedVideos[3]
-              video(playsinline="" autoplay="" muted="" onclick=`toggleDetails('${p.id}')` src=videoSrc poster=decodedVideos[4])
+              - var videoSrc = useHighRes ? (decodedVideos[2] || decodedVideos[3]) : (decodedVideos[3] || decodedVideos[2])
+              video(playsinline="" webkit-playsinline="" autoplay="" muted="" loop="" onclick=onclick onkeydown=onkeydown src=videoSrc poster=decodedVideos[4] tabindex="0" role="button" aria-label="Expand video")
             else if isPostLink(p)
-              a(href=p.url)
-                | ↗
+              if hasPostThumbnail(p)
+                - var useHighRes = !user || user.highResThumbnails === undefined || user.highResThumbnails === 1
+                a(href=p.url aria-label=`Open ${p.domain}`)
+                  img(src=postThumbnail(p, useHighRes, showNsfwThumbnails) loading="lazy")
+              else
+                a.link-preview(href=p.url aria-label=`Open ${p.domain}`)
+                  | ↗
 
       details(id=`${p.id}` open=(query.view == "card" && (isPostMedia(p) || isPostLink(p))) class=`${query.view}`)
         summary.expand-post expand media
@@ -77,13 +87,13 @@ mixin post(p, currentUrl)
           else if isPostVideo(p)
             - var decodedVideos = decodePostVideoUrls(p)
             - var videoSrc = decodedVideos[2] || decodedVideos[1] || decodedVideos[0]
-            video(playsinline="" controls="" muted="" preload="metadata" onplay=`initVideoPlayer(this, true)` src=videoSrc data-hls-url=decodedVideos[0] data-dash-url=decodedVideos[1] poster=decodedVideos[4])
+            video.expanded-video(playsinline="" webkit-playsinline="" controls="" muted="" preload="metadata" onpointerdown=`initVideoPlayer(this, false, true)` onplay=`initVideoPlayer(this, true, false)` src=videoSrc data-fallback-url=decodedVideos[2] data-hls-url=decodedVideos[0] data-dash-url=decodedVideos[1] poster=decodedVideos[4])
             if !decodedVideos[2] && (decodedVideos[0] || decodedVideos[1])
               script.
                 initVideoPlayer(document.currentScript.previousElementSibling);
           else if isPostLink(p)
-            a(href=p.url)
-              | #{p.domain} ↗
+            a.expanded-link(href=p.url)
+              | Open #{p.domain} ↗
         if (query.view == "compact")
-          button(onclick=`toggleDetails('${p.id}')`)
+          button.close-media(type="button" onclick=`toggleDetails('${p.id}')`)
               | close

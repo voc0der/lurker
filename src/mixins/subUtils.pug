@@ -49,6 +49,14 @@ script(defer).
     var detailsElement = document.getElementById(details_id);
     if (detailsElement) {
       detailsElement.open = !detailsElement.open;
+      if (detailsElement.open) {
+        var video = detailsElement.querySelector('.expanded-video');
+        if (video && window.initVideoPlayer) {
+          initVideoPlayer(video, false, true);
+        }
+      } else {
+        detailsElement.querySelectorAll('video').forEach(video => video.pause());
+      }
     }
   }
 
@@ -238,4 +246,3 @@ script(defer).
       alert('Network error occurred');
     }
   }
-

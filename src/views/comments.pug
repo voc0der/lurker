@@ -17,6 +17,9 @@ html
       var detailsElement = document.getElementById(details_id);
       if (detailsElement) {
         detailsElement.open = !detailsElement.open;
+        if (!detailsElement.open) {
+          detailsElement.querySelectorAll('video').forEach(video => video.pause());
+        }
       }
     }
 
@@ -63,7 +66,7 @@ html
           else if isPostVideo(post)
             - var decodedVideos = decodePostVideoUrls(postMedia)
             - var videoSrc = decodedVideos[2] || decodedVideos[1] || decodedVideos[0]
-            video(controls onplay=`initVideoPlayer(this, true)` src=videoSrc data-hls-url=decodedVideos[0] data-dash-url=decodedVideos[1] poster=decodedVideos[4]).post-media
+            video.expanded-video(playsinline="" webkit-playsinline="" controls preload="metadata" onpointerdown=`initVideoPlayer(this, false, true)` onplay=`initVideoPlayer(this, true, false)` src=videoSrc data-fallback-url=decodedVideos[2] data-hls-url=decodedVideos[0] data-dash-url=decodedVideos[1] poster=decodedVideos[4]).post-media
             if !decodedVideos[2] && (decodedVideos[0] || decodedVideos[1])
               script.
                 initVideoPlayer(document.currentScript.previousElementSibling);

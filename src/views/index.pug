@@ -35,35 +35,35 @@ html
               | #{fmtnum(about.accounts_active)} active
               | &nbsp;·&nbsp;
               | #{fmtnum(about.subscribers)} subscribers
-        hr
-        details.sort-details
-          summary.sorting sorting by #{query.sort + (query.t?' '+query.t:'')}
-          div.sort-opts
-            div
-              a(href=`${baseUrl}?sort=hot&view=${viewQuery}`) hot
-            div
-              a(href=`${baseUrl}?sort=new&view=${viewQuery}`) new
-            div
-              a(href=`${baseUrl}?sort=rising&view=${viewQuery}`) rising
-            div
-              a(href=`${baseUrl}?sort=top&view=${viewQuery}`) top
-            div
-              a(href=`${baseUrl}?sort=top&t=day&view=${viewQuery}`) top day
-            div
-              a(href=`${baseUrl}?sort=top&t=week&view=${viewQuery}`) top week
-            div
-              a(href=`${baseUrl}?sort=top&t=month&view=${viewQuery}`) top month
-            div
-              a(href=`${baseUrl}?sort=top&t=year&view=${viewQuery}`) top year
-            div
-              a(href=`${baseUrl}?sort=top&t=all&view=${viewQuery}`) top all
-        details.view-details
-          summary.viewing viewing as #{viewQuery}
-          div.view-opts
-            div
-              a(href=`${baseUrl}?sort=${sortQuery}&view=compact`) compact
-            div
-              a(href=`${baseUrl}?sort=${sortQuery}&view=card`) card
+        div.feed-controls
+          details.sort-details
+            summary.sorting #{query.sort + (query.t?' '+query.t:'')} ▾
+            div.sort-opts
+              div
+                a(href=`${baseUrl}?sort=hot&view=${viewQuery}`) hot
+              div
+                a(href=`${baseUrl}?sort=new&view=${viewQuery}`) new
+              div
+                a(href=`${baseUrl}?sort=rising&view=${viewQuery}`) rising
+              div
+                a(href=`${baseUrl}?sort=top&view=${viewQuery}`) top
+              div
+                a(href=`${baseUrl}?sort=top&t=day&view=${viewQuery}`) top day
+              div
+                a(href=`${baseUrl}?sort=top&t=week&view=${viewQuery}`) top week
+              div
+                a(href=`${baseUrl}?sort=top&t=month&view=${viewQuery}`) top month
+              div
+                a(href=`${baseUrl}?sort=top&t=year&view=${viewQuery}`) top year
+              div
+                a(href=`${baseUrl}?sort=top&t=all&view=${viewQuery}`) top all
+          details.view-details
+            summary.viewing #{viewQuery} ▾
+            div.view-opts
+              div
+                a(href=`${baseUrl}?sort=${sortQuery}&view=compact`) compact
+              div
+                a(href=`${baseUrl}?sort=${sortQuery}&view=card`) card
 
       div#posts-container
         if posts

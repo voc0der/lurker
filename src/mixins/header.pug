@@ -1,22 +1,22 @@
 mixin header(user)
   - var viewQuery = 'view=' + (query && query.view ? query.view : 'compact')
-  div.header
-    div.header-item
-      a(href=`/?${viewQuery}`) home
-    div.header-item
-      a(href=`/r/all?${viewQuery}`) all
-    div.header-item
-      a(href=`/r/popular?${viewQuery}`) popular
-    div.header-item
-      a(href=`/search?${viewQuery}`) search
-    div.header-item
-      a(href=`/subs?${viewQuery}`) subs
+  header.header
+    a.brand(href=`/?${viewQuery}` aria-label="Lurker home")
+      span.brand-mark(aria-hidden="true") L
+      span.brand-name lurker
+    nav.primary-nav(aria-label="Primary navigation")
+      div.header-item
+        a(href=`/r/all?${viewQuery}`) all
+      div.header-item
+        a(href=`/r/popular?${viewQuery}`) popular
+      div.header-item
+        a(href=`/search?${viewQuery}`) search
+      div.header-item
+        a(href=`/subs?${viewQuery}`) subs
     if user
-      div.header-item
-        a(href=`/dashboard?${viewQuery}`) #{user.username}
-        |&nbsp;
-        a(href='/logout') (logout)
+      div.header-item.account-nav
+        a.account-link(href=`/dashboard?${viewQuery}`) #{user.username}
+        a.logout-link(href='/logout') logout
     else
-      div.header-item
+      div.header-item.account-nav
         a(href=`/login`) login
-

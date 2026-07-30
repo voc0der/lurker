@@ -23,5 +23,6 @@ html
           div.search-message
             i #{message}
       if items
-        each item in items
-          +post(item.data, currentUrl)
+        div#posts-container
+          each item in items
+            +post(item.data, currentUrl)
