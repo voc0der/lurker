@@ -50,12 +50,24 @@ script(defer).
     if (detailsElement) {
       detailsElement.open = !detailsElement.open;
       if (detailsElement.open) {
+        if (window.suspendPostVideoPreview) {
+          suspendPostVideoPreview(detailsElement);
+        }
         var video = detailsElement.querySelector('.expanded-video');
         if (video && window.initVideoPlayer) {
-          initVideoPlayer(video, false, true);
+          initVideoPlayer(video, false);
         }
       } else {
-        detailsElement.querySelectorAll('video').forEach(video => video.pause());
+        detailsElement.querySelectorAll('video').forEach(function (video) {
+          if (window.releaseVideoPlayer) {
+            releaseVideoPlayer(video);
+          } else {
+            video.pause();
+          }
+        });
+        if (window.resumePostVideoPreview) {
+          resumePostVideoPreview(detailsElement);
+        }
       }
     }
   }

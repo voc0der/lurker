@@ -120,6 +120,9 @@ html
 
                     // Add new posts
                     postsContainer.insertAdjacentHTML('beforeend', data.html);
+                    if (window.initVideoPreviews) {
+                      initVideoPreviews(postsContainer);
+                    }
                   }
 
                   afterCursor = data.after;

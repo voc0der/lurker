@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-07-30
+
+### Fixed
+
+- Fixed expanded Reddit videos failing in Vivaldi and Chromium-based mobile
+  browsers that advertise unusable native HLS support
+- Initialize DASH before expanded playback to retain audio, with automatic MP4
+  recovery when adaptive playback fails
+- Release the thumbnail decoder while a mobile video is expanded and restore
+  thumbnail playback when it is closed
+- Explicitly play only visible video thumbnails, pause offscreen videos, and
+  initialize thumbnails added by infinite scroll
+- Retry thumbnail playback with Reddit's alternate MP4 when the preferred
+  quality cannot be decoded
+- Keep cross-origin media and byte-range requests out of the app service
+  worker's HTML/offline cache path
+
 ## [0.2.1] - 2026-07-30
 
 ### Changed

@@ -56,7 +56,8 @@ mixin post(p, currentUrl)
               - var useHighRes = !user || user.highResThumbnails === undefined || user.highResThumbnails === 1
               - var decodedVideos = decodePostVideoUrls(p)
               - var videoSrc = useHighRes ? (decodedVideos[2] || decodedVideos[3]) : (decodedVideos[3] || decodedVideos[2])
-              video(playsinline="" webkit-playsinline="" autoplay="" muted="" loop="" onclick=onclick onkeydown=onkeydown src=videoSrc poster=decodedVideos[4] tabindex="0" role="button" aria-label="Expand video")
+              - var alternateVideoSrc = videoSrc == decodedVideos[2] ? decodedVideos[3] : decodedVideos[2]
+              video.preview-video(playsinline="" webkit-playsinline="" muted="" loop="" preload="none" onclick=onclick onkeydown=onkeydown src=(videoSrc || false) data-preview-src=(videoSrc || false) data-preview-fallback-src=(alternateVideoSrc || false) poster=decodedVideos[4] tabindex="0" role="button" aria-label="Expand video")
             else if isPostLink(p)
               if hasPostThumbnail(p)
                 - var useHighRes = !user || user.highResThumbnails === undefined || user.highResThumbnails === 1
@@ -86,11 +87,8 @@ mixin post(p, currentUrl)
               img(src=p.url loading="lazy")
           else if isPostVideo(p)
             - var decodedVideos = decodePostVideoUrls(p)
-            - var videoSrc = decodedVideos[2] || decodedVideos[1] || decodedVideos[0]
-            video.expanded-video(playsinline="" webkit-playsinline="" controls="" muted="" preload="metadata" onpointerdown=`initVideoPlayer(this, false, true)` onplay=`initVideoPlayer(this, true, false)` src=videoSrc data-fallback-url=decodedVideos[2] data-hls-url=decodedVideos[0] data-dash-url=decodedVideos[1] poster=decodedVideos[4])
-            if !decodedVideos[2] && (decodedVideos[0] || decodedVideos[1])
-              script.
-                initVideoPlayer(document.currentScript.previousElementSibling);
+            - var fallbackVideo = decodedVideos[2] || decodedVideos[3]
+            video.expanded-video(playsinline="" webkit-playsinline="" controls="" muted="" preload="none" onpointerdown=`initVideoPlayer(this, false)` onkeydown=`initVideoPlayer(this, false)` onplay=`initVideoPlayer(this, true)` src=(fallbackVideo || false) data-fallback-url=(fallbackVideo || false) data-hls-url=decodedVideos[0] data-dash-url=decodedVideos[1] poster=decodedVideos[4])
           else if isPostLink(p)
             a.expanded-link(href=p.url)
               | Open #{p.domain} ↗

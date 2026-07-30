@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'lurker-v2';
+const CACHE_VERSION = 'lurker-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const OFFLINE_PAGE = '/offline';
@@ -61,6 +61,17 @@ self.addEventListener('fetch', (event) => {
 
   // Skip Chrome extension requests
   if (url.protocol === 'chrome-extension:') {
+    return;
+  }
+
+  // Let the browser handle third-party media and byte-range requests directly.
+  // Treating a failed video request like a page navigation can return the
+  // cached offline HTML to the media decoder.
+  if (
+    url.origin !== self.location.origin ||
+    request.destination === 'video' ||
+    request.headers.has('range')
+  ) {
     return;
   }
 

@@ -43,46 +43,67 @@ mixin head(title)
     link(rel="stylesheet" href="https://rsms.me/inter/inter.css")
     script(src="/vendor/dash.all.min.js" defer)
     script.
-      //- Reddit serves hosted-video audio separately from the fallback
-      //- MP4. Prepare HLS/DASH before playback so Android does not swap
-      //- sources while entering its native fullscreen player. If mobile
-      //- playback starts without that preparation, keep the known-good
-      //- MP4 instead. DASH errors also fall back to the MP4.
+      //- Initialize DASH before interaction so Reddit's separate audio and
+      //- video streams are attached before a mobile browser enters native
+      //- fullscreen. DASH/HLS errors restore the same proven MP4 used by
+      //- the thumbnail.
       function isMobileVideoContext() {
         return window.matchMedia('(pointer: coarse)').matches
           || window.matchMedia('(max-width: 767px)').matches;
       }
 
-      function initVideoPlayer(video, resume, prepareMobileDash) {
-        if (!video || video.dataset.playerInitialized) return;
+      function playVideo(video) {
+        var playPromise = video.play();
+        if (playPromise && playPromise.catch) {
+          playPromise.catch(function () {
+            if (video.classList.contains('preview-video')) {
+              video.dataset.previewPlayback = 'blocked';
+            }
+          });
+        }
+      }
+
+      function destroyDashPlayer(video) {
+        if (!video || !video.lurkerDashPlayer) return;
+        try {
+          video.lurkerDashPlayer.destroy();
+        } catch (_error) {
+          //- The media element is still reset below if dash.js has already
+          //- released the player.
+        }
+        delete video.lurkerDashPlayer;
+      }
+
+      function useFallbackVideo(video, fallbackUrl, resume) {
+        destroyDashPlayer(video);
+        video.dataset.playerInitialized = 'fallback';
+        if (video.getAttribute('src') !== fallbackUrl) {
+          video.src = fallbackUrl;
+          video.load();
+        }
+        if (resume) playVideo(video);
+      }
+
+      function initVideoPlayer(video, resume) {
+        if (!video) return;
         var hlsUrl = video.dataset.hlsUrl;
         var dashUrl = video.dataset.dashUrl;
         var fallbackUrl = video.dataset.fallbackUrl;
-        var mobileContext = isMobileVideoContext();
-        if (hlsUrl && video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.dataset.playerInitialized = "1";
-          video.src = hlsUrl;
-          video.load();
-          if (resume) {
-            var playPromise = video.play();
-            if (playPromise) playPromise.catch(function () {});
-          }
-        } else if (dashUrl && window.dashjs && (!mobileContext || prepareMobileDash || !fallbackUrl)) {
-          video.dataset.playerInitialized = "1";
+
+        if (video.dataset.playerInitialized) {
+          if (resume) playVideo(video);
+          return;
+        }
+
+        if (dashUrl && window.dashjs) {
+          video.dataset.playerInitialized = 'dash';
           var player = dashjs.MediaPlayer().create();
           var fallbackActivated = false;
           var activateFallback = function () {
             if (!fallbackUrl || fallbackActivated) return;
             fallbackActivated = true;
             var shouldResume = resume || !video.paused;
-            if (player.destroy) player.destroy();
-            video.dataset.playerInitialized = "fallback";
-            video.src = fallbackUrl;
-            video.load();
-            if (shouldResume) {
-              var fallbackPlay = video.play();
-              if (fallbackPlay) fallbackPlay.catch(function () {});
-            }
+            useFallbackVideo(video, fallbackUrl, shouldResume);
           };
           if (fallbackUrl && dashjs.MediaPlayer.events && dashjs.MediaPlayer.events.ERROR) {
             player.on(dashjs.MediaPlayer.events.ERROR, function () {
@@ -91,12 +112,148 @@ mixin head(title)
             });
           }
           try {
+            video.lurkerDashPlayer = player;
             player.initialize(video, dashUrl, !!resume);
           } catch (_error) {
             activateFallback();
           }
-        } else if (mobileContext && fallbackUrl && (!prepareMobileDash || !dashUrl)) {
-          //- This path intentionally does not change video.src.
-          video.dataset.playerInitialized = "1";
+        } else if (hlsUrl && video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.dataset.playerInitialized = 'hls';
+          if (fallbackUrl) {
+            video.addEventListener('error', function () {
+              var shouldResume = resume || !video.paused;
+              useFallbackVideo(video, fallbackUrl, shouldResume);
+            }, { once: true });
+          }
+          video.src = hlsUrl;
+          video.load();
+          if (resume) playVideo(video);
+        } else if (fallbackUrl) {
+          useFallbackVideo(video, fallbackUrl, resume);
         }
       }
+
+      function releaseVideoPlayer(video) {
+        if (!video) return;
+        video.pause();
+        if (!isMobileVideoContext()) return;
+
+        destroyDashPlayer(video);
+        video.removeAttribute('src');
+        video.load();
+        delete video.dataset.playerInitialized;
+      }
+
+      var previewVideoObserver;
+
+      function isVideoInViewport(video) {
+        var bounds = video.getBoundingClientRect();
+        return bounds.bottom > 0
+          && bounds.right > 0
+          && bounds.top < window.innerHeight
+          && bounds.left < window.innerWidth;
+      }
+
+      function playVideoPreview(video) {
+        if (!video || video.dataset.previewSuspended) return;
+        var previewUrl = video.dataset.previewSrc;
+        video.muted = true;
+        video.defaultMuted = true;
+        if (!video.getAttribute('src') && previewUrl) {
+          video.src = previewUrl;
+          video.load();
+        }
+        delete video.dataset.previewPlayback;
+        playVideo(video);
+      }
+
+      function pauseVideoPreview(video) {
+        if (video) video.pause();
+      }
+
+      function initVideoPreviews(root) {
+        if (!root || !root.querySelectorAll) return;
+        var videos = root.querySelectorAll('video.preview-video');
+
+        if ('IntersectionObserver' in window && !previewVideoObserver) {
+          previewVideoObserver = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                playVideoPreview(entry.target);
+              } else {
+                pauseVideoPreview(entry.target);
+              }
+            });
+          }, {
+            rootMargin: '96px 0px',
+            threshold: 0.15
+          });
+        }
+
+        videos.forEach(function (video) {
+          if (video.dataset.previewObserved) return;
+          video.dataset.previewObserved = '1';
+          video.muted = true;
+          video.defaultMuted = true;
+          video.addEventListener('error', function () {
+            var alternateUrl = video.dataset.previewFallbackSrc;
+            if (
+              !alternateUrl ||
+              video.dataset.previewFallbackUsed ||
+              video.dataset.previewSuspended
+            ) {
+              return;
+            }
+            video.dataset.previewFallbackUsed = '1';
+            video.dataset.previewSrc = alternateUrl;
+            video.src = alternateUrl;
+            video.load();
+            if (isVideoInViewport(video)) playVideoPreview(video);
+          });
+          if (previewVideoObserver) {
+            previewVideoObserver.observe(video);
+          } else {
+            playVideoPreview(video);
+          }
+        });
+      }
+
+      function findPostVideoPreview(detailsElement) {
+        var post = detailsElement && detailsElement.closest('article.post');
+        return post ? post.querySelector('.media-preview video.preview-video') : null;
+      }
+
+      function suspendPostVideoPreview(detailsElement) {
+        var preview = findPostVideoPreview(detailsElement);
+        if (!preview) return;
+        preview.dataset.previewSuspended = '1';
+        preview.pause();
+
+        //- Android browsers can fail to allocate the expanded player while
+        //- the thumbnail still owns a decoder for the same clip.
+        if (isMobileVideoContext()) {
+          preview.removeAttribute('src');
+          preview.load();
+        }
+      }
+
+      function resumePostVideoPreview(detailsElement) {
+        var preview = findPostVideoPreview(detailsElement);
+        if (!preview) return;
+        delete preview.dataset.previewSuspended;
+        if (isVideoInViewport(preview)) playVideoPreview(preview);
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        initVideoPreviews(document);
+
+        document.addEventListener('visibilitychange', function () {
+          document.querySelectorAll('video.preview-video').forEach(function (video) {
+            if (document.hidden || !isVideoInViewport(video)) {
+              pauseVideoPreview(video);
+            } else {
+              playVideoPreview(video);
+            }
+          });
+        });
+      });
