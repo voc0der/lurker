@@ -70,7 +70,18 @@
 -
   function isPostLink(p) {
     p = getPostData(p);
-    return (p.post_hint == "link");
+    if (p.post_hint == "link") {
+      return true;
+    }
+    // Reddit often omits post_hint entirely, commonly on the link posts that
+    // have no thumbnail. Fall back to treating any off-site url as a link so
+    // those posts still get a preview and an external-link action.
+    if (isPostText(p) || isPostMedia(p)) {
+      return false;
+    }
+    const url = p.url || "";
+    return /^https?:\/\//i.test(url)
+      && !/^https?:\/\/([a-z0-9-]+\.)*reddit\.com\//i.test(url);
   }
 -
   function hasPostThumbnail(p) {

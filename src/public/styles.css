@@ -1880,6 +1880,13 @@ body[data-classic-layout="1"] .media-preview video {
   text-decoration: none;
 }
 
+.media-preview .link-preview:hover,
+.media-preview .link-preview:focus-visible {
+  background: color-mix(in srgb, var(--bg-color-muted) 78%, var(--text-color-muted));
+  color: var(--text-color);
+  text-decoration: none;
+}
+
 .media-preview.self-post-preview {
   display: flex;
   overflow: visible;

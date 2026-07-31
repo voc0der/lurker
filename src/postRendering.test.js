@@ -84,6 +84,27 @@ describe("compact text posts", () => {
 		expect(html).toContain("<p>Link-post body</p>");
 	});
 
+	test("treat a link post with no post_hint as a link", () => {
+		const html = renderPost({
+			is_self: false,
+			selftext_html: null,
+			domain: "bhphotovideo.com",
+			url: "https://www.bhphotovideo.com/c/product/1234",
+			thumbnail: "default",
+		});
+
+		expect(html).toContain("link-preview");
+		expect(html).toContain('href="https://www.bhphotovideo.com/c/product/1234"');
+		expect(html).toContain("external-action");
+	});
+
+	test("do not mistake a reddit-hosted post for an off-site link", () => {
+		const html = renderPost();
+
+		expect(html).not.toContain("link-preview");
+		expect(html).not.toContain("external-action");
+	});
+
 	test("lazy-load inline images in rendered previews", () => {
 		const imageUrl = "https://i.redd.it/example.png";
 		const html = renderPost({

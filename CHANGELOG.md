@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-07-31
+
+### Fixed
+
+- Detect link posts that Reddit returns without a `post_hint`, so posts with no
+  thumbnail render a clickable external-link glyph instead of an empty gray
+  placeholder and regain their external-link action chip
+- Added a hover and keyboard-focus state to the thumbnail-less link preview so
+  it reads as interactive
+
 ## [0.2.3] - 2026-07-31
 
 ### Added
