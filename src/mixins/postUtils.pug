@@ -11,6 +11,16 @@
     return isPostImage(p) || isPostGallery(p) || isPostVideo(p);
   }
 -
+  function isPostText(p) {
+    p = getPostData(p);
+    return p.is_self === true || p.post_hint == "self";
+  }
+-
+  function postSelfText(p) {
+    p = getPostData(p);
+    return p.selftext_html || '';
+  }
+-
   function isPostGallery(p) {
     p = getPostData(p);
     return (p.is_gallery && p.is_gallery == true);
@@ -105,7 +115,7 @@
     var result = html;
     matches.forEach((match) => {
       // Replace each occurrence with an actual img tag
-      result = result.replace(match[0], '<a href="' + match[1] + '"><img class="inline" src="' + match[1] + '"></a>');
+      result = result.replace(match[0], '<a href="' + match[1] + '"><img class="inline" src="' + match[1] + '" loading="lazy" decoding="async"></a>');
     })
 
     return result;

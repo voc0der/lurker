@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-07-31
+
+### Added
+
+- Added RES-style discussion thumbnails for Reddit text posts: the main glyph
+  opens the full post while a small expando toggles a formatted inline preview
+- Added responsive, keyboard-accessible text previews to compact feeds, search
+  results, crossposts, and posts loaded by infinite scroll
+
+### Fixed
+
+- Decode self-text in compact listings and nested crossposts so inline previews
+  render formatted content instead of encoded markup
+
 ## [0.2.2] - 2026-07-30
 
 ### Fixed

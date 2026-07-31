@@ -49,6 +49,13 @@ script(defer).
     var detailsElement = document.getElementById(details_id);
     if (detailsElement) {
       detailsElement.open = !detailsElement.open;
+      document.querySelectorAll('.self-post-expando[aria-controls]').forEach(function (toggle) {
+        if (toggle.getAttribute('aria-controls') !== details_id) return;
+        toggle.setAttribute('aria-expanded', String(detailsElement.open));
+        toggle.setAttribute('aria-label', detailsElement.open ? 'Collapse text preview' : 'Preview text post');
+        var icon = toggle.querySelector('.expando-icon');
+        if (icon) icon.textContent = detailsElement.open ? '−' : '+';
+      });
       if (detailsElement.open) {
         if (window.suspendPostVideoPreview) {
           suspendPostVideoPreview(detailsElement);
@@ -69,6 +76,21 @@ script(defer).
           resumePostVideoPreview(detailsElement);
         }
       }
+    }
+  }
+
+  function toggleSensitiveText(button) {
+    if (!button) return;
+    var contentId = button.getAttribute('aria-controls');
+    var content = contentId ? document.getElementById(contentId) : null;
+    if (!content) return;
+
+    var reveal = content.hidden;
+    content.hidden = !reveal;
+    button.setAttribute('aria-expanded', String(reveal));
+    var label = button.querySelector('.sensitive-text-label');
+    if (label) {
+      label.textContent = reveal ? button.dataset.hideLabel : button.dataset.revealLabel;
     }
   }
 

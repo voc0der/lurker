@@ -5,6 +5,13 @@ mixin post(p, currentUrl)
   - var viewQuery = query && query.view ? query.view : 'compact'
   - var sortQuery = query && query.sort ? query.sort + (query.t ? '&t=' + query.t : '') : 'hot'
   - var showNsfwThumbnails = user && user.showNsfwThumbnails === 1
+  - var commentsHref = `/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}`
+  - var textPost = isPostText(p)
+  - var contentPost = getPostData(p)
+  - var selfTextHtml = postSelfText(p)
+  - var contentIsOver18 = contentPost.over_18 === true || p.over_18 === true
+  - var contentIsSpoiler = contentPost.spoiler === true || p.spoiler === true
+  - var contentIsSensitive = contentIsOver18 || contentIsSpoiler
   article(class=`post`)
     div.post-container(class=`${query.view} ${p.stickied?"sticky":""}`)
       div.post-info
@@ -17,22 +24,22 @@ mixin post(p, currentUrl)
               | &nbsp;·&nbsp;
               a(href=`/r/${p.subreddit}?view=${viewQuery}`) r/#{p.subreddit}
           div.title-container(class=`${query.view}`)
-            a(class=`${query.view}`, href=`/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}`)
+            a(class=`${query.view}`, href=commentsHref)
               != p.title
             span.domain #{p.domain}
-          if (query.view == "card" && !isPostMedia(p) && p.selftext_html)
+          if (query.view == "card" && !isPostMedia(p) && selfTextHtml)
             div.self-text-overflow.card
-              if p.spoiler || p.over_18
-                div.spoiler(id=`spoiler_${p.id}`, onclick=`javascript:document.getElementById('spoiler_${p.id}').style.display = 'none';`)
-                  h2
-                    != p.over_18 ? 'nsfw' : 'spoiler'
-              div.self-text.card
-                != convertInlineImageLinks(p.selftext_html)
+              if contentIsSensitive
+                button.self-text-spoiler.card(type="button" onclick="toggleSensitiveText(this)" aria-controls=`card_text_${p.id}` aria-expanded="false" data-reveal-label=(contentIsOver18 ? "Reveal NSFW text" : "Reveal spoiler text") data-hide-label=(contentIsOver18 ? "Hide NSFW text" : "Hide spoiler text"))
+                  span.sensitive-text-label
+                    != contentIsOver18 ? 'Reveal NSFW text' : 'Reveal spoiler text'
+              div.self-text.card(id=(contentIsSensitive ? `card_text_${p.id}` : false) hidden=contentIsSensitive)
+                != convertInlineImageLinks(selfTextHtml)
           div.post-actions
             span.action-chip.vote-score(aria-label=`${fmtnum(p.ups)} votes`)
               span.action-icon(aria-hidden="true") ↑
               strong #{fmtnum(p.ups)}
-            a.action-chip(href=`/comments/${p.id}?from=${from}&sort=${sortQuery}&view=${viewQuery}` aria-label=`${fmtnum(p.num_comments)} comments`)
+            a.action-chip(href=commentsHref aria-label=`${fmtnum(p.num_comments)} comments`)
               span.action-icon(aria-hidden="true") ↩
               span #{fmtnum(p.num_comments)}
             if p.gilded > 0
@@ -42,7 +49,7 @@ mixin post(p, currentUrl)
               a.action-chip.external-action(href=p.url aria-label=`Open ${p.domain}`)
                 span(aria-hidden="true") ↗
         if query.view != "card"
-          div.media-preview
+          div.media-preview(class=(textPost ? "self-post-preview" : ""))
             - var onclick = `toggleDetails('${p.id}')`
             - var onkeydown = `if(event.key === 'Enter' || event.key === ' '){event.preventDefault();toggleDetails('${p.id}')}`
             if isPostGallery(p)
@@ -66,32 +73,49 @@ mixin post(p, currentUrl)
               else
                 a.link-preview(href=p.url aria-label=`Open ${p.domain}`)
                   | ↗
+            else if textPost
+              a.self-post-link(href=commentsHref aria-label="Open discussion")
+                svg.self-post-icon(viewBox="0 0 24 24" aria-hidden="true")
+                  path(d="M6.5 5.5h11A2.5 2.5 0 0 1 20 8v7a2.5 2.5 0 0 1-2.5 2.5H11l-4.75 3v-3A2.5 2.5 0 0 1 4 15V8a2.5 2.5 0 0 1 2.5-2.5Z")
+                  path.self-post-icon-lines(d="M8 9h8M8 12h8M8 15h5")
+              if selfTextHtml
+                button.self-post-expando(type="button" onclick=onclick aria-controls=p.id aria-expanded="false" aria-label="Preview text post")
+                  span.expando-icon(aria-hidden="true") +
 
-      details(id=`${p.id}` open=(query.view == "card" && (isPostMedia(p) || isPostLink(p))) class=`${query.view}`)
+      details(id=`${p.id}` open=(query.view == "card" && (isPostMedia(p) || isPostLink(p))) class=`${query.view} ${textPost ? "self-post-details" : ""}`)
         summary.expand-post expand media
-        div.image-viewer
-          if query.view == "card" && (p.spoiler || (p.over_18 && !showNsfwThumbnails)) && isPostMedia(p)
-            div.spoiler(id=`spoiler_${p.id}`, onclick=`javascript:document.getElementById('spoiler_${p.id}').style.display = 'none';`) 
-              h2
-                != p.over_18 ? 'nsfw' : 'spoiler'
-          if isPostGallery(p)
-            div.gallery
-              each item in postGalleryItems(p)
-                div.gallery-item
-                  a(href=`/media/${item.url}`)
-                    img(src=item.url loading="lazy")
-                  div.gallery-item-idx
-                    | #{`${item.idx}/${item.total}`}
-          else if isPostImage(p)
-            a(href=`/media/${p.url}`)
-              img(src=p.url loading="lazy")
-          else if isPostVideo(p)
-            - var decodedVideos = decodePostVideoUrls(p)
-            - var fallbackVideo = decodedVideos[2] || decodedVideos[3]
-            video.expanded-video(playsinline="" webkit-playsinline="" controls="" muted="" preload="none" onpointerdown=`initVideoPlayer(this, false)` onkeydown=`initVideoPlayer(this, false)` onplay=`initVideoPlayer(this, true)` src=(fallbackVideo || false) data-fallback-url=(fallbackVideo || false) data-hls-url=decodedVideos[0] data-dash-url=decodedVideos[1] poster=decodedVideos[4])
-          else if isPostLink(p)
-            a.expanded-link(href=p.url)
-              | Open #{p.domain} ↗
-        if (query.view == "compact")
+        if textPost && selfTextHtml
+          div.self-post-body.self-text
+            if contentIsSensitive
+              button.self-text-spoiler(type="button" onclick="toggleSensitiveText(this)" aria-controls=`preview_text_${p.id}` aria-expanded="false" data-reveal-label=(contentIsOver18 ? "Reveal NSFW text" : "Reveal spoiler text") data-hide-label=(contentIsOver18 ? "Hide NSFW text" : "Hide spoiler text"))
+                span.sensitive-text-label
+                  != contentIsOver18 ? 'Reveal NSFW text' : 'Reveal spoiler text'
+            div.self-post-content(id=(contentIsSensitive ? `preview_text_${p.id}` : false) hidden=contentIsSensitive)
+              != convertInlineImageLinks(selfTextHtml)
+        else
+          div.image-viewer
+            if query.view == "card" && (p.spoiler || (p.over_18 && !showNsfwThumbnails)) && isPostMedia(p)
+              div.spoiler(id=`spoiler_${p.id}`, onclick=`javascript:document.getElementById('spoiler_${p.id}').style.display = 'none';`)
+                h2
+                  != p.over_18 ? 'nsfw' : 'spoiler'
+            if isPostGallery(p)
+              div.gallery
+                each item in postGalleryItems(p)
+                  div.gallery-item
+                    a(href=`/media/${item.url}`)
+                      img(src=item.url loading="lazy")
+                    div.gallery-item-idx
+                      | #{`${item.idx}/${item.total}`}
+            else if isPostImage(p)
+              a(href=`/media/${p.url}`)
+                img(src=p.url loading="lazy")
+            else if isPostVideo(p)
+              - var decodedVideos = decodePostVideoUrls(p)
+              - var fallbackVideo = decodedVideos[2] || decodedVideos[3]
+              video.expanded-video(playsinline="" webkit-playsinline="" controls="" muted="" preload="none" onpointerdown=`initVideoPlayer(this, false)` onkeydown=`initVideoPlayer(this, false)` onplay=`initVideoPlayer(this, true)` src=(fallbackVideo || false) data-fallback-url=(fallbackVideo || false) data-hls-url=decodedVideos[0] data-dash-url=decodedVideos[1] poster=decodedVideos[4])
+            else if isPostLink(p)
+              a.expanded-link(href=p.url)
+                | Open #{p.domain} ↗
+        if (query.view == "compact" && !textPost)
           button.close-media(type="button" onclick=`toggleDetails('${p.id}')`)
               | close

@@ -13,6 +13,7 @@ const {
 const { validateInviteToken } = require("../invite");
 const logger = require("../logger");
 const oidc = require("../oidc");
+const { unescapeSelfText } = require("../utils/redditHtml");
 const {
 	getRedditAuthHeaders,
 	getRedditAuthStatus,
@@ -275,8 +276,8 @@ router.get("/", authenticateToken, async (req, res) => {
 	const aboutReq = G.getSubreddit(subreddit, redditRequestOptions);
 	const [posts, about] = await Promise.all([postsReq, aboutReq]);
 
-	if (query.view === "card" && posts && posts.posts) {
-		posts.posts.forEach(unescape_selftext);
+	if (posts?.posts) {
+		posts.posts.forEach(unescapeSelfText);
 	}
 
 	res.render("index", {
@@ -328,8 +329,8 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
 	const aboutReq = G.getSubreddit(subreddit, redditRequestOptions);
 	const [posts, about] = await Promise.all([postsReq, aboutReq]);
 
-	if (query.view === "card" && posts && posts.posts) {
-		posts.posts.forEach(unescape_selftext);
+	if (posts?.posts) {
+		posts.posts.forEach(unescapeSelfText);
 	}
 
 	res.render("index", {
@@ -379,8 +380,8 @@ router.get("/api/r/:subreddit/posts", authenticateToken, async (req, res) => {
 		getRedditRequestOptions(req),
 	);
 
-	if (query.view === "card" && posts && posts.posts) {
-		posts.posts.forEach(unescape_selftext);
+	if (posts?.posts) {
+		posts.posts.forEach(unescapeSelfText);
 	}
 
 	// Render posts as HTML partial
@@ -534,8 +535,8 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 				? "no results found"
 				: `showing ${items.length} results`;
 
-		if (req.query.view === "card" && items) {
-			items.forEach(unescape_selftext);
+		if (items) {
+			items.forEach(unescapeSelfText);
 		}
 
 		res.render("post-search", {
@@ -1363,25 +1364,10 @@ function unescape_submission(response) {
 	const post = response.submission.data;
 	const comments = response.comments;
 
-	unescape_selftext(post);
+	unescapeSelfText(post);
 	comments.forEach(unescape_comment);
 
 	return { post, comments };
-}
-
-function unescape_selftext(post) {
-	// If called after getSubmissions
-	if (post.data?.selftext_html) {
-		post.data.selftext_html = he.decode(post.data.selftext_html);
-	}
-	// If called after getSubmissionComments
-	if (post.selftext_html) {
-		post.selftext_html = he.decode(post.selftext_html);
-	}
-	// Also unescape crosspost parent selftext if present
-	if (post.crosspost_parent_list && post.crosspost_parent_list.length > 0) {
-		unescape_selftext(post.crosspost_parent_list[0]);
-	}
 }
 
 function unescape_comment(comment) {
