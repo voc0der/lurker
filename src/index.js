@@ -119,6 +119,8 @@ async function bootstrap() {
 	}
 
 	const routes = require("./routes/index");
+	const apiRoutes = require("./routes/api");
+	const { describeApiWhitelist } = require("./apiAuth");
 	app.use(express.json());
 	app.use(express.urlencoded({ extended: true }));
 	app.use(express.static(path.join(__dirname, "public")));
@@ -129,6 +131,15 @@ async function bootstrap() {
 		"/vendor",
 		express.static(path.join(__dirname, "..", "node_modules", "dashjs", "dist", "modern", "umd")),
 	);
+	// The key-authenticated API is mounted ahead of the cookie, CSRF, and
+	// browser rate-limit middlewares: it is stateless, uses no cookies, and
+	// enforces its own source-address whitelist and rate limit.
+	app.use("/api/v1", apiRoutes);
+	const apiWhitelist = describeApiWhitelist();
+	logger.info(
+		`API (/api/v1) source whitelist: ${apiWhitelist.description}${apiWhitelist.configured ? "" : " (default)"}`,
+	);
+
 	app.use((req, _res, next) => {
 		req.cookies = parseCookies(req.headers.cookie);
 		next();

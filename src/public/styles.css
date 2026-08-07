@@ -878,6 +878,29 @@ form input[type="submit"]:hover {
   font-family: monospace;
 }
 
+.api-key-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  margin: 5px 0 10px;
+  border: 1px solid var(--bg-color-muted);
+  border-radius: 4px;
+  background-color: var(--bg-color-muted);
+  color: var(--text-color);
+  font-family: monospace;
+}
+
+.api-key-actions {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.api-key-actions form {
+  margin: 0;
+}
+
 .invite-table {
   width: 100%;
   padding: 10px 0;

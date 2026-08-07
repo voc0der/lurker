@@ -30,6 +30,14 @@ services:
       ADMIN_GROUP: "admin"       # default: admin (used when REMOTE_HEADER_LOGIN is enabled)
       REVERSE_PROXY_WHITELIST: ""  # comma-separated trusted proxy IPs (default: unset)
 
+      # --- API (/api/v1, per-user API keys) ---
+      # Source addresses allowed to reach the API, compared against the direct
+      # TCP peer (never X-Forwarded-For). Accepts plain IPs and IPv4 CIDRs.
+      # Default when unset/empty: "127.0.0.1,::1" (loopback only).
+      # Use "off" to disable the API entirely, "*" to allow any address.
+      API_WHITELIST: ""          # e.g. "127.0.0.1,::1,10.2.5.50" or "172.28.0.0/16"
+      API_RATE_LIMIT: "600"      # max API requests per 15-minute window per IP (default: 600)
+
       # --- OIDC (OpenID Connect + PKCE) ---
       OIDC_ENABLED: ""           # default: "false". Set to "true" to enable OIDC
       OIDC_ISSUER_URL: ""        # required if OIDC_ENABLED=true (provider discovery URL)

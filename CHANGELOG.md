@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-07
+
+### Added
+
+- Per-user API keys, generated, rotated, and revoked from the dashboard, that
+  authenticate a read-only `/api/v1` surface without a browser session
+- API requests reuse the key owner's stored Reddit credential (burner bearer
+  token or cookie), so automations share lurker's authenticated session instead
+  of hitting Reddit anonymously
+- `/api/v1` endpoints for subreddit listings, the subscription home feed,
+  comment threads, search, subreddit metadata, and subscriptions, each available
+  as an Atom feed shaped like Reddit's own `.rss`, as normalized JSON, or as
+  Reddit's raw listing JSON via `?raw=1`
+- `API_WHITELIST` gates the API by source address (the direct TCP peer, never
+  `X-Forwarded-For`), defaulting to loopback only, and accepting plain IPs, IPv4
+  and IPv6 CIDR ranges, `off`, or `*`
+- `API_RATE_LIMIT` gives the API its own request budget (default 600 per 15
+  minutes), keyed on the same peer address as the whitelist so a forwarded
+  header cannot rotate around it
+- API keys supplied as `?api_key=` are redacted from logs, error messages, and
+  the Atom `rel="self"` link so they do not persist in feed readers
+- Database migration: add-api-key-column
+
 ## [0.2.4] - 2026-07-31
 
 ### Fixed

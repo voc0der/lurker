@@ -21,6 +21,7 @@ me if you would like an invite.
   - invite-only user management
   - admin dashboard with invite tokens
   - rate limiting and reverse proxy support
+  - per-user API keys for scripted access, IP-gated and localhost-only by default
 
 - **user experience**
   - minimal use of client-side javascript
@@ -138,6 +139,58 @@ each user can customize their experience via the dashboard:
 - **Theme Preference**: choose between auto (system), light, dark, or RES night mode
 - **Reddit Authentication**: optionally send a per-user Reddit bearer token or cookie header with Reddit JSON requests
 
+**api access**
+
+each user can mint a personal API key from the dashboard ("api key" section) to
+read reddit through lurker without logging in — useful for scripts, feed
+readers, and automations. requests are served with **that user's stored reddit
+credential** (the burner-account bearer token or cookie set in the dashboard),
+so your automation reuses the same authenticated session lurker uses instead of
+hitting reddit anonymously and getting rate limited.
+
+the API is locked down by two independent gates:
+
+1. `API_WHITELIST` — the source address must be listed. it defaults to loopback
+   only (`127.0.0.1,::1`), so a fresh install is reachable only from inside the
+   container/host. it is compared against the direct TCP peer, never
+   `X-Forwarded-For`
+2. the per-user API key itself
+
+pass the key as `X-API-Key`, `Authorization: Bearer <key>`, or `?api_key=`
+(handy for feed readers; note keys in urls end up in access logs). regenerating
+a key immediately invalidates the old one; revoking removes API access for that
+user entirely.
+
+```bash
+# from a host allowed by API_WHITELIST (e.g. API_WHITELIST=10.2.5.50)
+$ curl -k -H "X-API-Key: $LURKER_KEY" \
+    https://172.28.17.103:9495/api/v1/r/buildapcsales/new.rss
+
+# same data as json
+$ curl -k -H "X-API-Key: $LURKER_KEY" \
+    "https://172.28.17.103:9495/api/v1/r/buildapcsales/new.json?limit=50"
+```
+
+every endpoint below serves `.rss`/`.atom` (an atom feed shaped like reddit's
+own `.rss`), `.json` (normalized fields), or `.json?raw=1` (reddit's untouched
+listing json). a path with no extension defaults to json.
+
+| endpoint | description |
+| -------- | ----------- |
+| `GET /api/v1/health` | whitelist probe; the only endpoint that needs no key |
+| `GET /api/v1/whoami` | the user the key belongs to |
+| `GET /api/v1/r/<sub>/<sort>` | listing for a subreddit; sort is `hot`, `new`, `top`, `best`, `rising`, or `controversial` |
+| `GET /api/v1/r/<sub>` | same, sort via `?sort=` (default `hot`); multireddits work as `sub1+sub2` |
+| `GET /api/v1/r/<sub>/about.json` | subreddit metadata |
+| `GET /api/v1/home` | the key owner's subscription multireddit |
+| `GET /api/v1/comments/<id>` | a submission and its comments, flattened |
+| `GET /api/v1/search?q=...` | submission search, optionally `&subreddit=<sub>` |
+| `GET /api/v1/subscriptions` | the key owner's subscribed subreddits |
+
+query params: `limit` (1-100, default 25), `after`/`before` for paging, `t`
+(`hour`…`all`) for `top`/`controversial`, and `raw=1`. anything else is dropped
+rather than forwarded to reddit.
+
 **PWA installation**
 
 lurker can be installed as a Progressive Web App on mobile devices:
@@ -163,6 +216,13 @@ once installed, lurker runs in standalone mode without browser chrome.
 - `REMOTE_HEADER_LOGIN`: enable SSO via remote headers (`true`/`false`)
 - `ADMIN_GROUP`: remote header group name that grants admin privileges, defaults to `admin`
 - `REVERSE_PROXY_WHITELIST`: comma-separated list of trusted proxy IPs for `trust proxy` setting
+
+**api**
+- `API_WHITELIST`: comma-separated source addresses allowed to reach `/api/v1`.
+  Defaults to `127.0.0.1,::1` (loopback only) when unset or empty. Accepts plain
+  IPs and IPv4 CIDR ranges (`172.28.0.0/16`), `off` to disable the API entirely,
+  or `*` to allow any address
+- `API_RATE_LIMIT`: maximum API requests per 15-minute window per IP, defaults to `600`
 
 **OIDC (OpenID Connect + PKCE)**
 - `OIDC_ENABLED`: set to `true` to enable OIDC

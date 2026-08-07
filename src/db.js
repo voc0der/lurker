@@ -157,4 +157,16 @@ runMigration("add-oidc-support", () => {
   `).run();
 });
 
+runMigration("add-api-key-column", () => {
+	db.query(`
+    ALTER TABLE users
+    ADD COLUMN apiKey TEXT
+  `).run();
+
+	// SQLite UNIQUE indexes allow multiple NULLs, so users without a key are fine
+	db.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_api_key_unique ON users(apiKey)
+  `).run();
+});
+
 module.exports = { db };

@@ -68,6 +68,35 @@ html
 
           button(type="submit" style="margin-top: 20px;") Save Preferences
 
+        h2 api key
+        fieldset.dashboard-fieldset
+          legend personal api key
+          p.dashboard-help
+            | Use this key to read feeds without logging in, e.g. from scripts.
+            | Access is additionally restricted by the #[code API_WHITELIST]
+            | environment variable.
+          p.dashboard-help
+            | Allowed source addresses: #[strong #{apiWhitelist.description}]
+            if !apiWhitelist.configured
+              |  (default)
+
+          if apiKey
+            label(for="api-key") Your key
+            input#api-key.api-key-input(type="text" value=apiKey readonly onclick="this.select()")
+            p.dashboard-help
+              | Example: #[code curl -k -H "X-API-Key: #{apiKey}" https://lurker.local:3000/api/v1/r/buildapcsales/new.rss]
+          else
+            p.dashboard-help no api key generated yet
+
+          div.api-key-actions
+            form(action="/api-key/regenerate" method="POST")
+              input(type="hidden" name="_csrf" value=csrfToken)
+              button(type="submit")= apiKey ? "Regenerate key" : "Generate key"
+            if apiKey
+              form(action="/api-key/revoke" method="POST")
+                input(type="hidden" name="_csrf" value=csrfToken)
+                button(type="submit") Revoke key
+
         if isAdmin
           h2 invites
 

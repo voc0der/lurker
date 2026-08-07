@@ -10,6 +10,11 @@ const {
 	getAuthSession,
 	setAuthTokenCookie,
 } = require("../auth");
+const {
+	clearUserApiKey,
+	describeApiWhitelist,
+	setUserApiKey,
+} = require("../apiAuth");
 const { validateInviteToken } = require("../invite");
 const logger = require("../logger");
 const oidc = require("../oidc");
@@ -600,10 +605,34 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 		isAdmin,
 		user: req.user,
 		redditAuthStatus,
+		apiKey: req.user.apiKey || null,
+		apiWhitelist: describeApiWhitelist(),
 		message: req.query.message,
 		query: req.query,
 		...commonRenderOptions,
 	});
+});
+
+// POST /api-key/regenerate - mint (or rotate) the caller's API key
+router.post("/api-key/regenerate", authenticateToken, async (req, res) => {
+	try {
+		setUserApiKey(req.user.id);
+		return res.redirect("/dashboard?message=API key regenerated");
+	} catch (err) {
+		logger.error("Failed to regenerate API key", err);
+		return res.redirect("/dashboard?message=Failed to regenerate API key");
+	}
+});
+
+// POST /api-key/revoke - drop the caller's API key entirely
+router.post("/api-key/revoke", authenticateToken, async (req, res) => {
+	try {
+		clearUserApiKey(req.user.id);
+		return res.redirect("/dashboard?message=API key revoked");
+	} catch (err) {
+		logger.error("Failed to revoke API key", err);
+		return res.redirect("/dashboard?message=Failed to revoke API key");
+	}
 });
 
 // POST /update-preferences
