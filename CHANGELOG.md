@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Phone-width layout (below 768px) now mirrors reddit's mobile web: header with
+  a navigation drawer, subreddit banner and community header with Join and
+  Feed/About tabs, reddit-style post cards (author or community avatar, flair,
+  link URL, thumbnail badge, vote/comment/share pills), media letterboxed into a
+  square over a blurred backdrop, a "Find anything" search bar on the home feed,
+  and threaded comments with avatars, OP/MOD labels, and thread connectors
+- Phones render in the system font, as reddit does; Inter now loads only on
+  desktop
+- Stickied moderator comments start collapsed on phones
+- Feed and comment requests ask reddit for `sr_detail`, so community icons need
+  no extra requests
+
+Desktop rendering is unchanged.
+
 ## [0.3.0] - 2026-08-07
 
 ### Added

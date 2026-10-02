@@ -1,6 +1,36 @@
+include icons
 mixin header(user)
   - var viewQuery = 'view=' + (query && query.view ? query.view : 'compact')
   header.header
+    details.m-drawer.m-only
+      summary.m-icon-btn(aria-label="Open navigation")
+        +icon("menu")
+      div.m-drawer-scrim(onclick="this.closest('details').open = false")
+      nav.m-drawer-panel(aria-label="Navigation")
+        a.m-drawer-item(href=`/?${viewQuery}`)
+          +icon("home")
+          span Home
+        a.m-drawer-item(href=`/r/popular?${viewQuery}`)
+          +icon("popular")
+          span Popular
+        a.m-drawer-item(href=`/r/all?${viewQuery}`)
+          +icon("all")
+          span All
+        hr.m-drawer-rule
+        a.m-drawer-item(href=`/subs?${viewQuery}`)
+          +icon("communities")
+          span Subscriptions
+        a.m-drawer-item(href=`/search?${viewQuery}`)
+          +icon("search")
+          span Search
+        if user
+          hr.m-drawer-rule
+          a.m-drawer-item(href=`/dashboard?${viewQuery}`)
+            +icon("user")
+            span #{user.username}
+          a.m-drawer-item(href='/logout')
+            +icon("logout")
+            span Log out
     a.brand(href=`/?${viewQuery}` aria-label="Lurker home")
       span.brand-mark(aria-hidden="true") L
       span.brand-name lurker
@@ -20,3 +50,24 @@ mixin header(user)
     else
       div.header-item.account-nav
         a(href=`/login`) login
+    div.m-header-actions.m-only
+      a.m-icon-btn(href=`/search?${viewQuery}` aria-label="Search")
+        +icon("search")
+      details.m-overflow.m-header-menu
+        summary.m-icon-btn(aria-label="Account menu")
+          +icon("overflow")
+        div.m-menu
+          if user
+            a.m-menu-item(href=`/dashboard?${viewQuery}`)
+              +icon("user")
+              span #{user.username}
+            a.m-menu-item(href=`/subs?${viewQuery}`)
+              +icon("communities")
+              span Subscriptions
+            a.m-menu-item(href='/logout')
+              +icon("logout")
+              span Log out
+          else
+            a.m-menu-item(href='/login')
+              +icon("user")
+              span Log in

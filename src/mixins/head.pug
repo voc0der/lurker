@@ -8,7 +8,7 @@ mixin head(title)
 
     //- PWA Support
     link(rel="manifest" href="/manifest.json")
-    meta(name="theme-color" content="#0b1416")
+    meta(name="theme-color" content="#0e1113")
     meta(name="color-scheme" content="light dark")
     meta(name="mobile-web-app-capable" content="yes")
     meta(name="application-name" content="Lurker")
@@ -37,10 +37,12 @@ mixin head(title)
 
     //- Styles
     link(rel="stylesheet", href="/styles.css")
+    //- Phones get reddit's mobile web layout, set in the system font like reddit.
+    link(rel="stylesheet", href="/mobile.css" media="(max-width: 767px)")
     if theme
       link(rel="stylesheet", href=`/${theme}.css`)
-    link(rel="preconnect" href="https://rsms.me/")
-    link(rel="stylesheet" href="https://rsms.me/inter/inter.css")
+    link(rel="preconnect" href="https://rsms.me/" media="(min-width: 768px)")
+    link(rel="stylesheet" href="https://rsms.me/inter/inter.css" media="(min-width: 768px)")
     script(src="/vendor/dash.all.min.js" defer)
     script.
       //- Initialize DASH before interaction so Reddit's separate audio and
@@ -243,6 +245,59 @@ mixin head(title)
         delete preview.dataset.previewSuspended;
         if (isVideoInViewport(preview)) playVideoPreview(preview);
       }
+
+      function sharePost(button) {
+        var url = button.dataset.url;
+        if (navigator.share) {
+          navigator.share({ title: button.dataset.title, url: url }).catch(function () {});
+          return;
+        }
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(url).then(function () {
+            button.classList.add('is-copied');
+            setTimeout(function () { button.classList.remove('is-copied'); }, 1500);
+          });
+        }
+      }
+
+      async function toggleJoin(button) {
+        var sub = button.dataset.joinSub;
+        var thing = button.dataset.joined === '1' ? 'unsubscribe' : 'subscribe';
+        var csrf = document.querySelector('meta[name="csrf-token"]');
+        button.disabled = true;
+        try {
+          var response = await fetch('/' + thing, {
+            method: 'POST',
+            headers: {
+              'X-CSRF-Token': csrf ? csrf.getAttribute('content') : '',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ subreddit: sub }),
+          });
+          if (!response.ok) throw new Error('Failed to ' + thing);
+          var joined = thing === 'subscribe';
+          document.querySelectorAll('[data-join-sub]').forEach(function (other) {
+            if (other.dataset.joinSub.toLowerCase() !== sub.toLowerCase()) return;
+            other.dataset.joined = joined ? '1' : '0';
+            other.classList.toggle('is-joined', joined);
+            other.textContent = joined ? 'Joined' : 'Join';
+          });
+          var legacy = document.getElementById('thinger_' + sub);
+          if (legacy) legacy.innerText = joined ? 'unsubscribe' : 'subscribe';
+        } catch (error) {
+          console.error(error);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      //- Mobile menus are <details>; close them on outside taps like reddit's.
+      document.addEventListener('click', function (event) {
+        if (!window.matchMedia('(max-width: 767px)').matches) return;
+        document.querySelectorAll('details.m-overflow[open], details.sort-details[open], details.view-details[open]').forEach(function (menu) {
+          if (!menu.contains(event.target)) menu.open = false;
+        });
+      });
 
       document.addEventListener('DOMContentLoaded', function () {
         initVideoPreviews(document);

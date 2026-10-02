@@ -1,3 +1,8 @@
+/*
+ * Everything here lives in the `base` layer so phone styles in mobile.css
+ * (unlayered, loaded only at phone widths) override it wholesale.
+ */
+@layer base {
 :root {
   /* Light mode colors */
   --bg-color: #fff;
@@ -1085,36 +1090,6 @@ body[data-classic-layout="1"] .domain {
   }
 }
 
-/* Mobile: Keep compact row layout with thumbnails */
-@media (max-width: 767px) {
-  .post-container.compact {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .post-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .media-preview {
-    order: -1 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    flex-shrink: 0;
-    width: auto;
-  }
-
-  .post-text {
-    width: 100%;
-  }
-
-  body[data-classic-layout="1"] .post-container.compact {
-    padding: 0.3rem;
-  }
-}
 
 /* === Subscription Management Styles === */
 
@@ -2206,144 +2181,8 @@ button {
   }
 }
 
-@media (max-width: 767px) {
-  .header {
-    gap: 6px;
-    min-height: 52px;
-  }
-
-  .brand {
-    gap: 6px;
-    font-size: 1.15rem;
-  }
-
-  .brand-mark {
-    width: 30px;
-    height: 30px;
-  }
-
-  .header-item a {
-    min-height: 34px;
-    padding: 6px 8px;
-    font-size: 0.78rem;
-  }
-
-  .account-nav .logout-link {
-    display: none;
-  }
-
-  .account-nav .account-link {
-    max-width: 5.5rem;
-  }
-
-  .hero,
-  #posts-container,
-  .comments-container {
-    width: 100%;
-    border-right: 0;
-    border-left: 0;
-    border-radius: 0;
-  }
-
-  .hero {
-    margin-top: 0;
-    padding: 14px 14px 11px;
-  }
-
-  .hero h1 {
-    font-size: 1.32rem;
-  }
-
-  .post-info,
-  body[data-classic-layout="1"] .post-info {
-    flex-direction: row;
-    padding: 13px 14px 11px;
-  }
-
-  .title-container > a,
-  .title-container.card > a,
-  body[data-classic-layout="1"] .title-container > a {
-    font-size: 0.98rem;
-    line-height: 1.32;
-  }
-
-  .media-preview,
-  body[data-classic-layout="1"] .media-preview {
-    order: initial !important;
-    flex: 0 0 96px;
-    width: 96px;
-    height: 80px;
-    margin: 2px 0 0 12px !important;
-    padding: 0 !important;
-  }
-
-  .action-chip {
-    min-height: 30px;
-    padding: 5px 9px;
-  }
-
-  .post-container details[open] {
-    padding: 1px 14px 13px;
-  }
-
-  .media-preview .self-post-link {
-    flex-basis: 54px;
-    width: 54px;
-    height: 54px;
-  }
-
-  .self-post-icon {
-    width: 31px;
-    height: 31px;
-  }
-
-  .image-viewer.main-content img,
-  .image-viewer.main-content video {
-    max-width: 100%;
-    max-height: 70vh;
-  }
-
-  .comments-container {
-    padding: 14px 14px 28px;
-  }
+/* Pieces of the mobile layout; mobile.css reveals them. */
+.m-only {
+  display: none;
 }
-
-@media (max-width: 430px) {
-  .brand-name {
-    display: none;
-  }
-
-  .primary-nav {
-    gap: 0;
-  }
-
-  .header-item a {
-    padding-right: 7px;
-    padding-left: 7px;
-  }
-
-  .account-nav .account-link {
-    max-width: 4.25rem;
-  }
-
-  .media-preview,
-  body[data-classic-layout="1"] .media-preview {
-    flex-basis: 88px;
-    width: 88px;
-    height: 76px;
-    margin-left: 10px !important;
-  }
-
-  .media-preview .self-post-link {
-    flex-basis: 50px;
-    width: 50px;
-    height: 50px;
-  }
-
-  .self-post-expando {
-    flex-basis: 18px;
-    width: 18px;
-    height: 18px;
-    min-height: 18px;
-  }
 }

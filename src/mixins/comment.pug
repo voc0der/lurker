@@ -1,5 +1,6 @@
 include ../utils
 include postUtils
+include mobile
 
 mixin infoContainer(data, next_id, prev_id)
   - var hats = (data.is_submitter?['op']:[]).concat(data.distinguished=="moderator"?['mod']:[])
@@ -37,6 +38,72 @@ mixin infoContainer(data, next_id, prev_id)
   function hasReplies(data) {
     return data.replies && data.replies.data && data.replies.data.children && data.replies.data.children.length > 0;
   }
+-
+  // reddit only offers to collapse a thread when replies are actually loaded,
+  // not when the only child is a "more replies" stub.
+  function hasLoadedReplies(data) {
+    return hasReplies(data) && data.replies.data.children.some((child) => child.kind === "t1");
+  }
+
+mixin commentHead(data)
+  - var isMod = data.distinguished == "moderator"
+  span.m-comment-head.m-only
+    span.m-comment-avatar(aria-hidden="true")
+      img(src=defaultAvatar(data.author) alt="" loading="lazy" onerror="this.style.visibility='hidden'")
+    span.m-comment-expand(aria-hidden="true")
+      +icon("plus-circle")
+    span.m-comment-author #{data.author}
+    if data.author === "AutoModerator"
+      span.m-app-badge
+        +icon("app")
+        | App
+    if data.is_submitter
+      span.m-op OP
+    if isMod
+      span.m-mod MOD
+    span.m-meta-sep(aria-hidden="true") •
+    span.m-comment-time #{timeAgo(data.created)}
+    if data.edited !== false
+      span.m-meta-sep(aria-hidden="true") •
+      span.m-comment-time Edited #{timeAgo(data.edited)}
+    if data.stickied
+      span.m-meta-sep(aria-hidden="true") •
+      span.m-comment-sticky
+        +icon("pin")
+        | Stickied comment
+
+mixin commentActions(data, next_id, prev_id)
+  - var deleted = data.collapsed_reason_code == "DELETED" || data.author == "[deleted]"
+  div.m-comment-actions.m-only
+    if hasLoadedReplies(data)
+      button.m-collapse(type="button" onclick="this.closest('details').open = false" aria-label="Collapse thread")
+        +icon("minus-circle")
+    span.m-comment-vote(aria-label=`${fmtnum(data.ups)} votes`)
+      span.m-pill-icon
+        +icon("upvote")
+      span.m-vote-count #{fmtcount(data.ups)}
+      span.m-pill-icon
+        +icon("downvote")
+    a.m-comment-reply(href=`https://www.reddit.com${data.permalink}`)
+      span.m-pill-icon
+        +icon("comment")
+      span Reply
+    +overflowMenu("Comment options", true)
+      if next_id
+        a.m-menu-item(href=`#${next_id}`)
+          +icon("arrow-down")
+          span Next comment
+      if prev_id
+        a.m-menu-item(href=`#${prev_id}`)
+          +icon("arrow-up")
+          span Previous comment
+      a.m-menu-item(href=`https://www.reddit.com${data.permalink}`)
+        +icon("external")
+        span Open on Reddit
+      if deleted
+        a.m-menu-item(href=`https://undelete.pullpush.io${data.permalink}`)
+          +icon("undelete")
+          span Search on undelete
 
 mixin comment(com, isfirst, parent_id, next_id, prev_id)
   - var data = com.data
@@ -45,22 +112,30 @@ mixin comment(com, isfirst, parent_id, next_id, prev_id)
   if com.kind == "more"
     div(class=`more ${isfirst ? 'first' : ''}`)
       a(href=`/comments/${parent_id}/comment/${data.id}`)
-        | #{data.count} more #{fmttxt(data.count, 'comment')}
+        span.m-more-icon.m-only(aria-hidden="true")
+          +icon("plus-circle")
+        span.d-only #{data.count} more #{fmttxt(data.count, 'comment')}
+        span.m-only #{data.count} more #{data.count == 1 ? 'reply' : 'replies'}
   else
-    div(class=`comment ${isfirst ? 'first' : ''} ${data.stickied ? 'sticky' : ''}`)
+    //- reddit folds stickied moderator comments on mobile; see comments.pug
+    - var foldOnMobile = data.stickied && data.distinguished == "moderator"
+    div(class=`comment ${isfirst ? 'first' : ''} ${data.stickied ? 'sticky' : ''} ${hasReplyData ? 'has-replies' : ''}` data-fold=(foldOnMobile ? '1' : false))
       details(id=`${data.id}` open="")
         summary.expand-comments
           +infoContainer(data, next_id, prev_id)
-        div.comment-body
-          != convertInlineImageLinks(data.body_html)
-        if hasReplyData
-          div.replies
-            - var total = data.replies.data.children.length
-            each reply, index in data.replies.data.children
-              - var next_idx = index + 1
-              - var prev_idx = index - 1
-              - var next_com = next_idx < total ? data.replies.data.children[next_idx] : null
-              - var prev_com = prev_idx >= 0 ? data.replies.data.children[prev_idx] : null
-              - var next_id = next_com ? next_com.data.id : null
-              - var prev_id = prev_com ? prev_com.data.id : null
-              +comment(reply, false, parent_id, next_id, prev_id)
+          +commentHead(data)
+        div.comment-content
+          div.comment-body
+            != convertInlineImageLinks(data.body_html)
+          +commentActions(data, next_id, prev_id)
+          if hasReplyData
+            div.replies
+              - var total = data.replies.data.children.length
+              each reply, index in data.replies.data.children
+                - var next_idx = index + 1
+                - var prev_idx = index - 1
+                - var next_com = next_idx < total ? data.replies.data.children[next_idx] : null
+                - var prev_com = prev_idx >= 0 ? data.replies.data.children[prev_idx] : null
+                - var next_id = next_com ? next_com.data.id : null
+                - var prev_id = prev_com ? prev_com.data.id : null
+                +comment(reply, false, parent_id, next_id, prev_id)
