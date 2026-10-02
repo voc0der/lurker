@@ -37,3 +37,53 @@
       .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(obj[key]))
       .join('&');
   }
+-
+  // Counts the way reddit prints them on buttons: 953, 1.3K, 12.3K, 2.2M.
+  function fmtcount(n) {
+    n = Number(n) || 0;
+    if (Math.abs(n) < 1000) return String(n);
+    return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+  }
+-
+  function timeAgo(created) {
+    if (!created) return '';
+    var diff = timeDifference(Date.now(), created * 1000);
+    return /^\d+s$/.test(diff) ? 'just now' : diff + ' ago';
+  }
+-
+  function decodeEntities(s) {
+    return String(s || '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&');
+  }
+-
+  // reddit serves one of eight default snoo avatars to accounts without a
+  // custom one; pick one deterministically per author.
+  function defaultAvatar(name) {
+    var hash = 0;
+    var s = String(name || '');
+    for (var i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+    return `https://www.redditstatic.com/avatars/defaults/v2/avatar_default_${hash % 8}.png`;
+  }
+-
+  function safeImageUrl(url) {
+    var u = decodeEntities(url);
+    return /^https:\/\/[^\s"'()\\]+$/i.test(u) ? u : '';
+  }
+-
+  function safeColor(c) {
+    return /^#[0-9a-f]{3,8}$/i.test(String(c || '')) ? c : '';
+  }
+-
+  // Community icon from an about.json record or a listing's sr_detail.
+  function communityIcon(sr) {
+    if (!sr) return '';
+    return safeImageUrl(sr.community_icon) || safeImageUrl(sr.icon_img);
+  }
+-
+  function communityColor(sr) {
+    return (sr && (safeColor(sr.primary_color) || safeColor(sr.key_color))) || '#d93900';
+  }

@@ -149,3 +149,28 @@
 
     return [hls_url, dash_url, fallback_url, scrubber_url, poster_url];
   }
+-
+  // Inline custom properties for the mobile media frame. Like reddit, portrait
+  // media is letterboxed into a square over a blurred copy of itself.
+  function postMediaFrame(p, allowBackdrop) {
+    p = getPostData(p);
+    var w = 0, h = 0, backdrop = '';
+    var video = p.secure_media && p.secure_media.reddit_video;
+    if (video && video.width && video.height) { w = video.width; h = video.height; }
+    var image = p.preview && p.preview.images && p.preview.images[0];
+    if (image && image.source) {
+      if (!w) { w = image.source.width; h = image.source.height; }
+      var small = image.resolutions && image.resolutions.length ? image.resolutions[0] : image.source;
+      backdrop = safeImageUrl(small.url);
+    }
+    var items = p.gallery_data && p.gallery_data.items;
+    if (!w && p.media_metadata && items && items.length) {
+      var first = p.media_metadata[items[0].media_id];
+      if (first && first.s) { w = first.s.x; h = first.s.y; }
+      if (first && first.p && first.p.length) backdrop = safeImageUrl(first.p[0].u);
+    }
+    var style = '';
+    if (w > 0 && h > 0) style += `--media-ratio:${Math.max(w / h, 1).toFixed(4)};`;
+    if (backdrop && allowBackdrop) style += `--media-backdrop:url("${backdrop}");`;
+    return style;
+  }

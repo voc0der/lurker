@@ -2,6 +2,7 @@ include ../mixins/comment
 include ../mixins/header
 include ../mixins/head
 include ../mixins/postUtils
+include ../mixins/mobile
 include ../utils
 
 - var post = data.post
@@ -29,10 +30,38 @@ html
       }
     }
 
-  body(data-theme=user.themePreference data-classic-layout=user.useClassicLayout)
+  body.post-page(data-theme=user.themePreference data-classic-layout=user.useClassicLayout)
     main#content
       +header(user)
-      div.hero
+      - var subHref = `/r/${post.subreddit}?${sortQuery}&${viewQuery}`
+      - var linkPost = isPostLink(post)
+      - var useHighRes = !user || user.highResThumbnails === undefined || user.highResThumbnails === 1
+      - var showNsfwThumbnails = user && user.showNsfwThumbnails === 1
+      - var linkPreview = linkPost && !isPostMedia(post) && postMedia.preview && postMedia.preview.images && postMedia.preview.images.length ? postThumbnail(postMedia, useHighRes, showNsfwThumbnails) : ''
+      div.hero.post-hero
+        div.m-post-head.m-only
+          +communityAvatar(post.sr_detail, post.subreddit, subHref)
+          div.m-post-head-text
+            div.m-post-head-line
+              a.m-post-head-sub(href=subHref) r/#{post.subreddit}
+              span.m-post-head-time #{timeAgo(post.created)}
+            div.m-post-head-line
+              span.m-post-head-author u/#{post.author}
+          div.m-post-head-end
+            if !isSubbed
+              +joinButton(post.subreddit, false, 'small')
+            +overflowMenu("Post options")
+              if from
+                a.m-menu-item(href=`${from}#${post.id}`)
+                  +icon("arrow-up")
+                  span Back to feed
+              a.m-menu-item(href=`https://www.reddit.com${post.permalink}`)
+                +icon("external")
+                span Open on Reddit
+              if linkPost
+                a.m-menu-item(href=post.url)
+                  +icon("link")
+                  span Open link
         h3.sub-title
           if from
             a(href=`${from}#${post.id}`) <- back
@@ -56,8 +85,9 @@ html
 
         h2.post-title
           != post.title
+        +flair(post)
 
-        div.image-viewer.main-content
+        div.image-viewer.main-content(style=(isPostMedia(post) && postMediaFrame(post, true)) || false)
           if isPostGallery(post)
             div.gallery
               each item in postGalleryItems(post)
@@ -74,12 +104,24 @@ html
             - var fallbackVideo = decodedVideos[2] || decodedVideos[3]
             video.expanded-video(playsinline="" webkit-playsinline="" controls preload="metadata" onpointerdown=`initVideoPlayer(this, false)` onkeydown=`initVideoPlayer(this, false)` onplay=`initVideoPlayer(this, true)` src=(fallbackVideo || false) data-fallback-url=(fallbackVideo || false) data-hls-url=decodedVideos[0] data-dash-url=decodedVideos[1] poster=decodedVideos[4]).post-media
           else if isPostLink(post)
-            a(href=post.url)
+            a.d-only(href=post.url)
               | #{post.url}
+            if linkPreview
+              a.m-link-preview.m-only(href=post.url)
+                img(src=linkPreview alt="" loading="lazy")
+            a.m-post-url.m-only(href=post.url) #{post.url}
 
         if postMedia.selftext_html
           div.self-text
             != convertInlineImageLinks(postMedia.selftext_html)
+
+        div.m-post-actions.m-only
+          +votePill(post.ups, `${fmtnum(post.ups)} votes`)
+          span.m-pill.m-comments(aria-label=`${fmtnum(post.num_comments)} comments`)
+            span.m-pill-icon
+              +icon("comment")
+            span #{fmtcount(post.num_comments)}
+          +sharePill(`https://www.reddit.com${post.permalink}`, decodeEntities(post.title))
 
         hr
 
@@ -93,3 +135,11 @@ html
           - var next_id = next_com ? next_com.data.id : null
           - var prev_id = prev_com ? prev_com.data.id : null
           +comment(child, true, post.id, next_id, prev_id)
+      //- Fold stickied moderator comments on phones only, as reddit does;
+      //- desktop keeps every comment open.
+      script.
+        if (window.matchMedia('(max-width: 767px)').matches) {
+          document.querySelectorAll('.comment[data-fold] > details').forEach(function (details) {
+            details.open = false;
+          });
+        }

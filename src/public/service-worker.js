@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'lurker-v3';
+const CACHE_VERSION = 'lurker-v4';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const OFFLINE_PAGE = '/offline';
@@ -7,6 +7,7 @@ const OFFLINE_PAGE = '/offline';
 const STATIC_ASSETS = [
   '/',
   '/styles.css',
+  '/mobile.css',
   '/offline',
   '/icon-192.png',
   '/icon-512.png'

@@ -1,0 +1,52 @@
+include icons
+
+//- Building blocks of the reddit-style mobile layout. They render on every
+//- page but stay hidden (.m-only) until mobile.css applies.
+
+mixin flair(p)
+  - var richtext = p.link_flair_type === 'richtext' && Array.isArray(p.link_flair_richtext) ? p.link_flair_richtext : []
+  if p.link_flair_text || richtext.length
+    - var flairBg = safeColor(p.link_flair_background_color)
+    - var flairTone = !flairBg ? 'is-plain' : (p.link_flair_text_color === 'light' ? 'is-light' : 'is-dark')
+    span.m-flair.m-only(class=flairTone style=(flairBg ? `background-color:${flairBg}` : false))
+      if richtext.length
+        each part in richtext
+          if part.e === 'text'
+            | #{decodeEntities(part.t)}
+          else if part.e === 'emoji' && safeImageUrl(part.u)
+            img.m-flair-emoji(src=safeImageUrl(part.u) alt=part.a || '' loading="lazy")
+      else
+        | #{decodeEntities(p.link_flair_text)}
+
+mixin communityAvatar(sr, name, href)
+  - var iconUrl = communityIcon(sr)
+  a.m-community-avatar(href=href aria-hidden="true" tabindex="-1")
+    if iconUrl
+      img(src=iconUrl alt="" loading="lazy")
+    else
+      span.m-community-fallback(style=`background-color:${communityColor(sr)}`) r/
+
+mixin votePill(score, label)
+  span.m-pill.m-vote.m-only(aria-label=label)
+    span.m-pill-icon
+      +icon("upvote")
+    span.m-vote-count #{fmtcount(score)}
+    span.m-pill-icon
+      +icon("downvote")
+
+mixin sharePill(url, title)
+  button.m-pill.m-share.m-only(type="button" onclick="sharePost(this)" data-url=url data-title=title aria-label="Share")
+    span.m-pill-icon
+      +icon("share")
+
+mixin joinButton(sub, joined, size)
+  button.m-join(type="button" class=[size === 'small' ? 'm-join-sm' : '', joined ? 'is-joined' : ''] data-join-sub=sub data-joined=(joined ? '1' : '0') onclick="toggleJoin(this)")
+    | #{joined ? 'Joined' : 'Join'}
+
+//- The ⋯ button: a <details> dropdown; block content becomes the menu items.
+mixin overflowMenu(label, small)
+  details.m-overflow
+    summary.m-overflow-btn(aria-label=label)
+      +icon(small ? "overflow-sm" : "overflow")
+    div.m-menu
+      block

@@ -246,6 +246,19 @@ function getRedditRequestOptions(req) {
 	}
 }
 
+// Listing requests ask reddit to inline each post's subreddit (sr_detail) so
+// the mobile feed can show community icons without extra requests.
+function withSubredditDetail(query) {
+	return { ...query, sr_detail: true };
+}
+
+function getSubscribedSubs(userId) {
+	return db
+		.query("SELECT subreddit FROM subscriptions WHERE user_id = $id")
+		.all({ id: userId })
+		.map((s) => s.subreddit.toLowerCase());
+}
+
 // GET /
 router.get("/", authenticateToken, async (req, res) => {
 	const subs = db
@@ -275,7 +288,7 @@ router.get("/", authenticateToken, async (req, res) => {
 	const postsReq = G.getSubmissions(
 		query.sort,
 		subreddit,
-		query,
+		withSubredditDetail(query),
 		redditRequestOptions,
 	);
 	const aboutReq = G.getSubreddit(subreddit, redditRequestOptions);
@@ -294,6 +307,7 @@ router.get("/", authenticateToken, async (req, res) => {
 		isHomePage,
 		user: req.user,
 		isSubbed: false,
+		subscribedSubs: subs.map((s) => s.subreddit.toLowerCase()),
 		currentUrl: req.url,
 		...commonRenderOptions,
 	});
@@ -328,7 +342,7 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
 	const postsReq = G.getSubmissions(
 		query.sort,
 		subreddit,
-		query,
+		withSubredditDetail(query),
 		redditRequestOptions,
 	);
 	const aboutReq = G.getSubreddit(subreddit, redditRequestOptions);
@@ -346,6 +360,7 @@ router.get("/r/:subreddit", authenticateToken, async (req, res) => {
 		isMulti,
 		user: req.user,
 		isSubbed,
+		subscribedSubs: getSubscribedSubs(req.user.id),
 		currentUrl: req.url,
 		...commonRenderOptions,
 	});
@@ -381,7 +396,7 @@ router.get("/api/r/:subreddit/posts", authenticateToken, async (req, res) => {
 	const posts = await G.getSubmissions(
 		query.sort,
 		subreddit,
-		query,
+		withSubredditDetail(query),
 		getRedditRequestOptions(req),
 	);
 
@@ -396,6 +411,8 @@ router.get("/api/r/:subreddit/posts", authenticateToken, async (req, res) => {
 			{
 				posts: posts ? posts.posts : [],
 				query,
+				subreddit: req.params.subreddit === "home" ? "home" : subreddit,
+				subscribedSubs: getSubscribedSubs(req.user.id),
 				currentUrl: req.query.currentUrl || req.originalUrl,
 				user: req.user,
 				...commonRenderOptions,
@@ -423,14 +440,20 @@ router.get("/comments/:id", authenticateToken, async (req, res) => {
 
 	const params = {
 		limit: 50,
+		sr_detail: true,
 	};
 	const response = await G.getSubmissionComments(
 		id,
 		params,
 		getRedditRequestOptions(req),
 	);
+	const data = unescape_submission(response);
+	const isSubbed = getSubscribedSubs(req.user.id).includes(
+		String(data.post.subreddit).toLowerCase(),
+	);
 	res.render("comments", {
-		data: unescape_submission(response),
+		data,
+		isSubbed,
 		user: req.user,
 		from: req.query.from,
 		query: req.query,
@@ -532,7 +555,7 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 	} else {
 		const { items, after } = await G.searchSubmissions(
 			req.query.q,
-			{},
+			{ sr_detail: true },
 			getRedditRequestOptions(req),
 		);
 		const message =
@@ -548,6 +571,7 @@ router.get("/post-search", authenticateToken, async (req, res) => {
 			items,
 			after,
 			message,
+			subscribedSubs: getSubscribedSubs(req.user.id),
 			user: req.user,
 			original_query: req.query.q,
 			currentUrl: req.url,
