@@ -1,10 +1,12 @@
 include ../mixins/head
+include ../mixins/deprecation
 
 doctype html
 html
   +head("login")
   body
     main#content
+      +deprecationBanner()
       h1 login
       if message
         div.register-error-message

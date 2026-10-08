@@ -2186,3 +2186,49 @@ button {
   display: none;
 }
 }
+
+/* End-of-life notice. Fixed colours so it reads the same in every theme. */
+.deprecation-banner {
+  align-self: stretch;
+  width: 100%;
+  margin: 0;
+  padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+  background: #d93900;
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.deprecation-banner p {
+  margin: 0;
+}
+
+.deprecation-banner p + p {
+  margin-top: 2px;
+}
+
+.deprecation-banner strong {
+  font-weight: 700;
+}
+
+.deprecation-banner a,
+.deprecation-banner a:visited,
+.deprecation-banner a:hover {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.deprecation-banner a:focus-visible {
+  outline-color: #fff;
+}
+
+.deprecation-banner code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 0.9em;
+  white-space: nowrap;
+}

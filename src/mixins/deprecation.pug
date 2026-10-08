@@ -1,0 +1,9 @@
+//- lurker is end-of-life; point anyone still running this image at reddont.
+mixin deprecationBanner()
+  - var reddontUrl = 'https://github.com/voc0der/reddont'
+  aside.deprecation-banner(role="note" aria-label="lurker is deprecated")
+    p
+      | #[strong lurker is no more.] #[a(href=reddontUrl target="_blank" rel="noopener noreferrer") reddont]
+      | is its replacement &mdash; switch your docker image to #[code voc0der/reddont:latest].
+    p
+      | Enjoy this app? Please #[a(href=reddontUrl target="_blank" rel="noopener noreferrer") &#9733; star reddont on GitHub]!

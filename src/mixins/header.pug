@@ -1,6 +1,8 @@
 include icons
+include deprecation
 mixin header(user)
   - var viewQuery = 'view=' + (query && query.view ? query.view : 'compact')
+  +deprecationBanner()
   header.header
     details.m-drawer.m-only
       summary.m-icon-btn(aria-label="Open navigation")
