@@ -17,7 +17,7 @@
 		"dashjs": "^5.2.0",
 		"express": "^5.2.1",
 		"express-rate-limit": "^8.2.1",
-		"he": "^1.2.0",
+		"he": "^2.0.0",
 		"jsonwebtoken": "^9.0.2",
 		"openid-client": "^6.0.0",
 		"pug": "^3.0.3",
