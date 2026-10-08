@@ -87,7 +87,11 @@ jobs:
             echo "No flake update detected. Skipping retry."
           fi
 
+      # A broken Docker Hub credential shouldn't stop the ghcr image from
+      # publishing; the final step still fails the run so it gets noticed.
       - name: Log in to Docker Hub
+        id: dockerhub
+        continue-on-error: true
         run: |
           echo "Attempting to log in to Docker Hub..."
           docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
@@ -99,10 +103,22 @@ jobs:
 
       - name: Build and Publish Multi-Platform Docker Images
         run: |
+          TAGS="-t ghcr.io/${{ github.repository_owner }}/lurker:latest"
+          if [ "${{ steps.dockerhub.outcome }}" == "success" ]; then
+            TAGS="$TAGS -t ${{ secrets.DOCKER_USERNAME }}/lurker:latest"
+          else
+            echo "::warning::Docker Hub login failed; publishing to ghcr only."
+          fi
+
           echo "Building and publishing multi-platform Docker images..."
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
-            -t ${{ secrets.DOCKER_USERNAME }}/lurker:latest \
-            -t ghcr.io/${{ github.repository_owner }}/lurker:latest \
+            $TAGS \
             --push \
             .
+
+      - name: Fail if Docker Hub was skipped
+        if: steps.dockerhub.outcome == 'failure'
+        run: |
+          echo "::error::Docker Hub login failed, so only ghcr was published. Update the DOCKER_USERNAME/DOCKER_PASSWORD secrets."
+          exit 1
